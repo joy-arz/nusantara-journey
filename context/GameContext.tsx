@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useMemo, useEffect, useRef, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 
@@ -22,10 +22,10 @@ interface GameState {
 }
 
 interface GameContextValue extends GameState {
-  gainXP: (amount: number, source: string) => Promise<void>;
-  addToInventory: (itemId: string) => Promise<void>;
-  completeQuest: (questId: string, xpReward: number, itemRewardId?: string) => Promise<void>;
-  recordBattle: (won: boolean) => Promise<void>;
+  gainXP: (amount: number, source: string) => void;
+  addToInventory: (itemId: string) => void;
+  completeQuest: (questId: string, xpReward: number, itemRewardId?: string) => void;
+  recordBattle: (won: boolean) => void;
   isLoading: boolean;
 }
 
@@ -63,12 +63,16 @@ const getXPForNextLevel = (level: number): number => {
   return 900 + (5 * 500) + (level - 9) * 1000;
 };
 
-// Simplified check for "today" in local date string
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
+  const stateRef = useRef<GameState>(INITIAL_STATE);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     loadState();
@@ -79,13 +83,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const saved = await AsyncStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Reset quests if it's a new day
         const today = getTodayDateString();
         if (parsed.lastQuestDate !== today) {
           parsed.completedQuestIds = [];
           parsed.lastQuestDate = today;
         }
         setState(parsed);
+        stateRef.current = parsed;
       }
     } catch (e) {
       console.error("Failed to load game state", e);
@@ -94,97 +98,96 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const saveState = async (newState: GameState) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-    } catch (e) {
+  const saveState = (newState: GameState) => {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newState)).catch(e => {
       console.error("Failed to save game state", e);
+    });
+  };
+
+  const gainXP = (amount: number, source: string) => {
+    const prev = stateRef.current;
+    let newXP = prev.xp + amount;
+    let newLevel = prev.level;
+    let leveledUp = false;
+
+    while (newXP >= getXPForNextLevel(newLevel)) {
+      newXP -= getXPForNextLevel(newLevel);
+      newLevel++;
+      leveledUp = true;
+    }
+
+    const newState: GameState = {
+      ...prev,
+      xp: newXP,
+      level: newLevel,
+      title: getTitleForLevel(newLevel),
+    };
+
+    setState(newState);
+    stateRef.current = newState;
+    saveState(newState);
+
+    if (leveledUp) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
 
-  const gainXP = async (amount: number, source: string) => {
-    setState(prev => {
-      let newXP = prev.xp + amount;
-      let newLevel = prev.level;
-      
-      while (newXP >= getXPForNextLevel(newLevel)) {
-        newXP -= getXPForNextLevel(newLevel);
-        newLevel++;
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-
-      const newState = {
-        ...prev,
-        xp: newXP,
-        level: newLevel,
-        title: getTitleForLevel(newLevel),
-      };
-      saveState(newState);
-      return newState;
-    });
+  const addToInventory = (itemId: string) => {
+    const prev = stateRef.current;
+    const existing = prev.inventory.find(i => i.id === itemId);
+    let newInventory: InventoryItem[];
+    if (existing) {
+      newInventory = prev.inventory.map(i =>
+        i.id === itemId ? { ...i, count: i.count + 1 } : i
+      );
+    } else {
+      newInventory = [
+        ...prev.inventory,
+        { id: itemId, name: itemId.replace(/_/g, " "), rarity: "Common" as const, icon: "help-circle", count: 1 },
+      ];
+    }
+    const newState: GameState = { ...prev, inventory: newInventory };
+    setState(newState);
+    stateRef.current = newState;
+    saveState(newState);
   };
 
-  const addToInventory = async (itemId: string) => {
-    // We'll need a way to look up item details, for now just a stub
-    // In real implementation we'd import INVENTORY_ITEMS
-    setState(prev => {
-      const existing = prev.inventory.find(i => i.id === itemId);
-      let newInventory;
-      if (existing) {
-        newInventory = prev.inventory.map(i => i.id === itemId ? { ...i, count: i.count + 1 } : i);
-      } else {
-        // Fallback for item details - in a real app these come from a constant
-        newInventory = [...prev.inventory, { id: itemId, name: itemId.replace(/_/g, ' '), rarity: "Common", icon: "help-circle", count: 1 } as InventoryItem];
-      }
-      const newState = { ...prev, inventory: newInventory };
-      saveState(newState);
-      return newState;
-    });
+  const completeQuest = (questId: string, xpReward: number, itemRewardId?: string) => {
+    const prev = stateRef.current;
+    if (prev.completedQuestIds.includes(questId)) return;
+
+    const newCompleted = [...prev.completedQuestIds, questId];
+    let newXP = prev.xp + xpReward;
+    let newLevel = prev.level;
+
+    while (newXP >= getXPForNextLevel(newLevel)) {
+      newXP -= getXPForNextLevel(newLevel);
+      newLevel++;
+    }
+
+    const newState: GameState = {
+      ...prev,
+      completedQuestIds: newCompleted,
+      xp: newXP,
+      level: newLevel,
+      title: getTitleForLevel(newLevel),
+    };
+
+    setState(newState);
+    stateRef.current = newState;
+    saveState(newState);
   };
 
-  const completeQuest = async (questId: string, xpReward: number, itemRewardId?: string) => {
-    setState(prev => {
-      if (prev.completedQuestIds.includes(questId)) return prev;
-      
-      const newCompleted = [...prev.completedQuestIds, questId];
-      const newState = { ...prev, completedQuestIds: newCompleted };
-      
-      // We'll handle XP and items separately to keep state logic clean
-      // but since we are inside setState, we must return the state with XP already updated if we want it atomic
-      let newXP = prev.xp + xpReward;
-      let newLevel = prev.level;
-      while (newXP >= getXPForNextLevel(newLevel)) {
-        newXP -= getXPForNextLevel(newLevel);
-        newLevel++;
-      }
-      
-      const finalState = {
-        ...newState,
-        xp: newXP,
-        level: newLevel,
-        title: getTitleForLevel(newLevel),
-      };
-
-      if (itemRewardId) {
-        // This is tricky inside setState if we don't have item info. 
-        // For now let's assume item reward is handled by the caller or we look it up.
-      }
-
-      saveState(finalState);
-      return finalState;
-    });
-  };
-
-  const recordBattle = async (won: boolean) => {
-    setState(prev => {
-      const newState = {
-        ...prev,
-        battleWins: prev.battleWins + (won ? 1 : 0),
-        battleTotal: prev.battleTotal + 1,
-      };
-      saveState(newState);
-      return newState;
-    });
+  const recordBattle = (won: boolean) => {
+    const prev = stateRef.current;
+    const newState: GameState = {
+      ...prev,
+      battleWins: prev.battleWins + (won ? 1 : 0),
+      battleTotal: prev.battleTotal + 1,
+    };
+    setState(newState);
+    stateRef.current = newState;
+    saveState(newState);
   };
 
   const value = useMemo(() => ({

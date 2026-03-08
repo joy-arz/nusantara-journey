@@ -10,11 +10,12 @@ Categories: Digitalisasi Pariwisata + Ekonomi Kreatif
 
 ### Frontend (Expo React Native — port 8081)
 - **Framework**: Expo Router (file-based routing)
-- **State**: React Query for server state, React Context for cart
+- **State**: React Query for server state, React Context for cart + gamification
 - **Styling**: React Native StyleSheet with Indonesian color palette
 - **Fonts**: Inter (400, 500, 600, 700 weights via expo-google-fonts)
 - **Animations**: React Native Reanimated
 - **Icons**: @expo/vector-icons (Ionicons, MaterialCommunityIcons)
+- **Keyboard**: react-native-keyboard-controller@1.18.5 (pinned — must match Expo Go native binary)
 
 ### Backend (Express + TypeScript — port 5000)
 - **Database**: PostgreSQL via Drizzle ORM
