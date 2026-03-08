@@ -8,8 +8,8 @@ export interface InventoryItemTemplate {
 
 export const INVENTORY_ITEMS: InventoryItemTemplate[] = [
   // Common
-  { id: "scholars_scroll", name: "Scholar's Scroll", rarity: "Common", icon: "scroll", description: "A simple scroll for recording historical findings." },
-  { id: "merchants_token", name: "Merchant's Token", rarity: "Common", icon: "coin", description: "A wooden token used by market travelers." },
+  { id: "scholars_scroll", name: "Scholar's Scroll", rarity: "Common", icon: "script-text", description: "A simple scroll for recording historical findings." },
+  { id: "merchants_token", name: "Merchant's Token", rarity: "Common", icon: "cash", description: "A wooden token used by market travelers." },
   { id: "candi_stone_brick", name: "Candi Stone Brick", rarity: "Common", icon: "square", description: "A sturdy brick made of volcanic andesite." },
   { id: "wayang_puppet_token", name: "Wayang Puppet Token", rarity: "Common", icon: "account", description: "A small charm shaped like a shadow puppet." },
   { id: "batik_cloth_fragment", name: "Batik Cloth Fragment", rarity: "Common", icon: "texture", description: "A small piece of hand-stamped batik." },
@@ -33,7 +33,7 @@ export const INVENTORY_ITEMS: InventoryItemTemplate[] = [
   { id: "sriwijaya_sea_chart", name: "Sriwijaya Sea Chart", rarity: "Epic", icon: "map-check", description: "A complete navigation chart of the Malacca Strait." },
   { id: "borobudur_stone_fragment", name: "Borobudur Stone Fragment", rarity: "Epic", icon: "shimmer", description: "A sacred stone carved with ancient wisdom." },
   { id: "majapahit_royal_seal", name: "Majapahit Royal Seal", rarity: "Epic", icon: "seal", description: "A bronze seal used for official imperial decrees." },
-  { id: "trowulan_gold_coin", name: "Trowulan Gold Coin", rarity: "Epic", icon: "currency-usd-circle", description: "A rare gold coin from the Majapahit era." },
+  { id: "trowulan_gold_coin", name: "Trowulan Gold Coin", rarity: "Epic", icon: "gold", description: "A rare gold coin from the Majapahit era." },
   
   // Legendary
   { id: "gajah_mada_sumpah_palapa", name: "Gajah Mada's Sumpah Palapa", rarity: "Legendary", icon: "crown", description: "The symbol of the vow that unified Nusantara." },
