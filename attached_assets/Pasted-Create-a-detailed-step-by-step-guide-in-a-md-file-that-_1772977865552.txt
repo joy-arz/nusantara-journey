@@ -1,0 +1,54 @@
+Create a detailed step by step guide in a .md file that explains how to run the project locally and how to build it into an app.
+
+Include these sections:
+
+    Local setup
+    Explain how to install dependencies, run the project locally, and verify that everything works.
+
+    App build process
+    Explain how to package or build the project into an installable application.
+
+    Database setup
+    Explain how to create and connect an online database using Supabase or another similar service that you recommend.
+    Include steps for:
+    creating the project
+    setting up tables
+    connecting the app to the database
+    handling environment variables
+    Additional configuration
+    Explain any other setup required for the project to work properly.
+
+    GitHub README
+    Write a full README.md suitable for a public GitHub repository.
+
+    Replit cleanup
+    Explain whether it is safe to remove:
+    .replit
+    replit.md
+
+    Replit integration files
+    Also explain why the agent folder is empty and whether something is supposed to be inside it.
+
+    PIDI submission file
+    Update the PIDI markdown file so it:
+    removes any mention of the previous terminal game project
+    clearly explains the current project
+    states which PIDI category it fits best
+    includes a real world case from the internet that demonstrates the problem this app solves
+
+    UI review
+    Review the UI and ensure:
+    no elements overlap
+    no conflicting layouts
+    clean spacing and alignment
+    smooth animations
+    no emoji usage
+    icons or images are used instead where appropriate
+    instead of a gradient card, use something like a card with less opacity on the inside and an outline on the outside
+
+    Google Login & Personalized User Management
+
+    Real Time Map
+    change the kingdom to Map and kingdoms list as a Map subsection below it. make it so that people can sort what to look for, an UMKM shop, a museum, a cultural site, or what kingdom is the area last when it was in the past
+
+Return everything in properly structured markdown.
