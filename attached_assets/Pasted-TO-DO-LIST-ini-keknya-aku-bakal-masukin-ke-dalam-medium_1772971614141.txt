@@ -1,0 +1,26 @@
+TO DO LIST (ini keknya aku bakal masukin ke dalam medium aku soon)
+
+Ini list pertanyaan yang aku butuh jawabannya dari project yang akan kita buat untuk isi ke proposal sisanya aku bis acari sendiri dari nanti yang anda paparkan good sir
+
+1. Jelaskan ringkasan eksekutif proyek Anda, bagaimana proyek ini mendukung tema Hackathon, dan bagaimana proyek ini dapat memberikan dampak positif bagi ekonomi digital dan lanskap keuangan Indonesia. Pastikan untuk menyertakan problem statement yang Anda coba jawab dengan solusi inovatif Anda.
+2. Jelaskan tujuan utama dan target spesifik yang ingin dicapai dari inovasi ini.
+3. Apa Masalah Utamanya? Masalah harus spesifik, bukan umum.
+4. Siapa pengguna / institusi / industri yang terdampak
+5. Solusi Inti. Deskripsikan secara umum solusi yang Anda ajukan dan bagaimana solusi tersebut bekerja.
+6. Gambar atau skema atau ilustrasi daripada masalah-solusi
+7. Bagaimana alur solusinya bekerja input – proses – output
+8. Jelaskan perubahan positif yang diharapkan bagi pengguna, industri, atau masyarakat.
+9. Uraikan dampak dalam waktu dekat dan dalam beberapa bulan/tahun ke depan.
+10. Jelaskan unsur keunikan, inovasi, atau pendekatan baru dari solusi Anda
+11. Jika sudah ada solusi serupa di pasar, jelaskan bagaimana solusi Anda melengkapi, memperbaiki, atau melampaui pendekatan tersebut.
+12. Sebutkan teknologi atau pendekatan utama (contoh: AI, aplikasi web, mobile, data analytics, automation).
+13. Why do we choose that tech?
+14. Algoritma Solusi. Jelaskan algoritma AI/ML dan/atau blockchain yang akan Anda gunakan.
+15. Jelaskan data apa yang digunakan dan dari mana asalnya, serta kualitas dan keandalan data tersebut.
+16. Pertimbangan Keamanan dan Skalabilitas. Uraikan secara singkat bagaimana solusi memperhatikan keamanan data dan potensi pengembangan ke depan.
+17. Status Inovasinya ide/mock/ or what?
+18. Realistis ga menurtmu untuk dirilis dan kenapa?
+19. Uraikan rencana tahapan implementasi dari awal hingga MVP atau pilot
+20. Gambarkan bisnis model dari solusi Anda dalam bentuk business model canvas, serta jelaskan lebih detail.
+21. Lampirkan capturing mockup / POC / prototype / pilot project yang relevan dengan proyek Anda berupa screenshoot jika ada (tidak mandatory). Lampirkan hal-hal yang belum Anda jelaskan dalam uraian di atas. Berikan referensi dari sumber-sumber yang Anda kutip.
+ 
