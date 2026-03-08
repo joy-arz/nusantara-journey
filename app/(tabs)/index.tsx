@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 
+import * as Location from "expo-location";
 import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
 import { Place } from "@/constants/places-data";

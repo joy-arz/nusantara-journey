@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
-import { Platform } from 'react-native';
 import { 
   KINGDOM_CENTROIDS, 
   MUSEUMS, 
@@ -69,16 +68,6 @@ export function useNearbyPlaces() {
         // Check if outside Indonesia (rough bounding box)
         const isOutside = latitude < -11 || latitude > 6 || longitude < 95 || longitude > 141;
 
-        let regionName = null;
-        try {
-          const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-          if (reverseGeocode.length > 0) {
-            regionName = reverseGeocode[0].region || reverseGeocode[0].subregion || reverseGeocode[0].city;
-          }
-        } catch (e) {
-          console.warn('Reverse geocoding failed', e);
-        }
-
         // Find nearest kingdom centroid
         let nearestKingdom = null;
         let minKingdomDist = Infinity;
@@ -90,7 +79,10 @@ export function useNearbyPlaces() {
           }
         }
 
-        // Filter and sort nearby places (within 200km or just nearest 5)
+        // Derive region label from nearest kingdom
+        const regionName = nearestKingdom ? nearestKingdom.name : null;
+
+        // Filter and sort nearby places — return nearest 5
         const processPlaces = (places: Place[]) => {
           return places
             .map(p => ({ ...p, distance: calculateDistance(latitude, longitude, p.lat, p.lng) }))
