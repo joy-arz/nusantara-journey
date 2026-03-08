@@ -9,6 +9,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { router } from "expo-router";
+import { useGame } from "@/context/GameContext";
 
 const { width } = Dimensions.get("window");
 
@@ -198,6 +199,14 @@ function KingdomDetail({ kingdom }: { kingdom: typeof KINGDOMS[0] }) {
 export default function KingdomsScreen() {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<number | null>(null);
+  const { gainXP } = useGame();
+
+  const handleSelect = (id: number) => {
+    if (selected !== id) {
+      gainXP(10, "kingdom_explore");
+    }
+    setSelected(selected === id ? null : id);
+  };
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : 0;
@@ -226,7 +235,7 @@ export default function KingdomsScreen() {
             <KingdomItem
               kingdom={k}
               isSelected={selected === k.id}
-              onPress={() => setSelected(selected === k.id ? null : k.id)}
+              onPress={() => handleSelect(k.id)}
             />
             {selected === k.id && <KingdomDetail kingdom={k} />}
           </View>

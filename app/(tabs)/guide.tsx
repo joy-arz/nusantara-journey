@@ -12,6 +12,9 @@ import { Colors } from "@/constants/colors";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetch } from "expo/fetch";
+import { useGame } from "@/context/GameContext";
+
+import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 
 interface Conversation {
   id: number;
@@ -79,8 +82,8 @@ function MessageBubble({ message }: { message: Message }) {
   return (
     <View style={[bubbleStyles.wrapper, isUser ? bubbleStyles.wrapperUser : bubbleStyles.wrapperAssistant]}>
       {!isUser && (
-        <View style={bubbleStyles.avatar}>
-          <Text style={{ fontSize: 16 }}>🏛️</Text>
+        <View style={[bubbleStyles.avatar, { backgroundColor: Colors.forestDeep }]}>
+          <Ionicons name="sparkles" size={16} color={Colors.accent} />
         </View>
       )}
       <View style={[bubbleStyles.bubble, isUser ? bubbleStyles.bubbleUser : bubbleStyles.bubbleAssistant]}>
@@ -128,6 +131,7 @@ export default function GuideScreen() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const listRef = useRef<FlatList>(null);
+  const { gainXP } = useGame();
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 + 16 : insets.bottom + 16;
@@ -174,6 +178,7 @@ export default function GuideScreen() {
 
     const userMsg: Message = { id: Date.now(), role: "user", content: text, conversationId: convId! };
     setMessages(prev => [...prev, userMsg]);
+    gainXP(15, "guide_chat");
 
     setIsStreaming(true);
     const assistantMsg: Message = { id: Date.now() + 1, role: "assistant", content: "", conversationId: convId! };
@@ -248,9 +253,19 @@ export default function GuideScreen() {
         </Pressable>
       </View>
 
+      {/* Sidebar Overlay */}
+      {showSidebar && (
+        <Pressable 
+          style={StyleSheet.absoluteFill} 
+          onPress={() => setShowSidebar(false)}
+        >
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.5)" }]} />
+        </Pressable>
+      )}
+
       {/* Sidebar */}
       {showSidebar && (
-        <View style={styles.sidebar}>
+        <View style={[styles.sidebar, { paddingTop: insets.top + 72 }]}>
           <Text style={styles.sidebarTitle}>Conversations</Text>
           {conversations.length === 0 ? (
             <Text style={styles.sidebarEmpty}>No conversations yet</Text>
@@ -274,7 +289,7 @@ export default function GuideScreen() {
       {/* Messages */}
       {messages.length === 0 && !showSidebar ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🏛️</Text>
+          <Ionicons name="telescope" size={64} color={Colors.accent} style={{ marginBottom: 16 }} />
           <Text style={styles.emptyTitle}>Ask Arjuna</Text>
           <Text style={styles.emptySubtitle}>Your AI guide to Indonesian kingdoms, mythology, and culture</Text>
           <View style={styles.suggestions}>
@@ -300,7 +315,7 @@ export default function GuideScreen() {
           inverted
           ListHeaderComponent={isStreaming && messages.at(-1)?.content === "" ? (
             <View style={bubbleStyles.wrapper}>
-              <View style={bubbleStyles.avatar}><Text style={{ fontSize: 16 }}>🏛️</Text></View>
+              <View style={[bubbleStyles.avatar, { backgroundColor: Colors.forestDeep }]}><Ionicons name="sparkles" size={16} color={Colors.accent} /></View>
               <View style={[bubbleStyles.bubble, bubbleStyles.bubbleAssistant]}>
                 <TypingDots />
               </View>
@@ -357,7 +372,6 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 11, color: Colors.textMuted, fontFamily: "Inter_400Regular" },
   messages: { flex: 1 },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  emptyIcon: { fontSize: 52, marginBottom: 16 },
   emptyTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 8 },
   emptySubtitle: { fontSize: 14, color: Colors.textMuted, textAlign: "center", fontFamily: "Inter_400Regular", marginBottom: 24, lineHeight: 20 },
   suggestions: { width: "100%", gap: 8 },
@@ -394,7 +408,7 @@ const styles = StyleSheet.create({
     position: "absolute", top: 0, left: 0, bottom: 0, width: 260,
     backgroundColor: Colors.backgroundSecondary,
     borderRightWidth: 1, borderColor: Colors.border,
-    zIndex: 100, paddingTop: 120, paddingHorizontal: 16,
+    zIndex: 100, paddingHorizontal: 16,
   },
   sidebarTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: Colors.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 },
   sidebarEmpty: { fontSize: 13, color: Colors.textMuted, fontFamily: "Inter_400Regular" },

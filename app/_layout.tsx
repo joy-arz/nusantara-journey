@@ -14,6 +14,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { CartProvider } from "@/context/CartContext";
+import { GameProvider } from "@/context/GameContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,7 +23,6 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="product/[id]" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="chat/[id]" options={{ headerShown: false, presentation: "card" }} />
     </Stack>
   );
 }
@@ -46,13 +46,15 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <CartProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <RootLayoutNav />
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </CartProvider>
+        <GameProvider>
+          <CartProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KeyboardProvider>
+                <RootLayoutNav />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </CartProvider>
+        </GameProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

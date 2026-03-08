@@ -1,371 +1,436 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Switch, Platform
+  View, Text, StyleSheet, ScrollView, Pressable,
+  Dimensions, Platform, Modal, FlatList
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Path, G, Text as SvgText } from "react-native-svg";
 import { Colors } from "@/constants/colors";
-import { useCart } from "@/context/CartContext";
+import { useGame } from "@/context/GameContext";
+import { getDailyQuests, Quest } from "@/constants/quests";
+import { TRIVIA_QUESTIONS, TriviaQuestion } from "@/constants/trivia";
+import { INVENTORY_ITEMS, RARITY_COLORS } from "@/constants/inventory-items";
+import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
+import { router } from "expo-router";
 
-const ACHIEVEMENTS = [
-  { id: 1, name: "Kingdom Scholar", desc: "Learned about 5 kingdoms", icon: "school", earned: true, color: Colors.accent },
-  { id: 2, name: "Mythology Seeker", desc: "Discovered 10 creatures", icon: "eye", earned: true, color: Colors.primary },
-  { id: 3, name: "Culture Guardian", desc: "Supported 3 UMKM", icon: "shield", earned: false, color: Colors.forest },
-  { id: 4, name: "Arjuna's Student", desc: "Asked 20 questions", icon: "chatbubble", earned: false, color: Colors.jade },
-  { id: 5, name: "Heritage Explorer", desc: "Visited all kingdoms", icon: "map", earned: false, color: Colors.accent },
-  { id: 6, name: "Nusantara Master", desc: "Completed all quests", icon: "crown", earned: false, color: Colors.primary },
-];
+const { width } = Dimensions.get("window");
 
-const IMPACT_STATS = [
-  { value: "3", label: "UMKM Supported", icon: "bag", color: Colors.primary },
-  { value: "7", label: "Sites Explored", icon: "map", color: Colors.accent },
-  { value: "12", label: "AI Chats", icon: "chatbubble", color: Colors.forest },
-  { value: "2", label: "Kingdoms Mastered", icon: "crown", color: Colors.jade },
-];
+function TriviaModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { recordBattle, gainXP } = useGame();
+  const [step, setStep] = useState<"start" | "quiz" | "result">("start");
+  const [questions, setQuestions] = useState<TriviaQuestion[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+
+  const startQuiz = () => {
+    const shuffled = [...TRIVIA_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 5);
+    setQuestions(shuffled);
+    setCurrentIndex(0);
+    setScore(0);
+    setStep("quiz");
+  };
+
+  const handleAnswer = (option: string) => {
+    if (selectedOption) return;
+    setSelectedOption(option);
+    const correct = option === questions[currentIndex].answer;
+    setIsCorrect(correct);
+    if (correct) setScore(s => s + 1);
+
+    setTimeout(() => {
+      if (currentIndex < questions.length - 1) {
+        setCurrentIndex(currentIndex + 1);
+        setSelectedOption(null);
+        setIsCorrect(null);
+      } else {
+        const finalScore = score + (correct ? 1 : 0);
+        setStep("result");
+        recordBattle(finalScore >= 3);
+        gainXP(finalScore * 5 + (finalScore === 5 ? 25 : 0), "trivia_battle");
+      }
+    }, 1500);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Cultural Battle</Text>
+            <Pressable onPress={onClose}>
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </Pressable>
+          </View>
+
+          {step === "start" && (
+            <View style={styles.triviaStart}>
+              <MaterialCommunityIcons name="sword-cross" size={64} color={Colors.accent} />
+              <Text style={styles.triviaText}>Test your knowledge of Nusantara! Answer 5 questions correctly to earn XP and wins.</Text>
+              <Pressable style={styles.primaryBtn} onPress={startQuiz}>
+                <Text style={styles.primaryBtnText}>Start Battle</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {step === "quiz" && questions[currentIndex] && (
+            <View style={styles.quizContent}>
+              <Text style={styles.quizProgress}>Question {currentIndex + 1} of 5</Text>
+              <Text style={styles.quizQuestion}>{questions[currentIndex].question}</Text>
+              <View style={styles.optionsGrid}>
+                {questions[currentIndex].options.map((option, i) => {
+                  const isSelected = selectedOption === option;
+                  const isAnswer = option === questions[currentIndex].answer;
+                  const showResult = selectedOption !== null;
+                  
+                  return (
+                    <Pressable
+                      key={i}
+                      style={[
+                        styles.optionBtn,
+                        isSelected && styles.optionSelected,
+                        showResult && isAnswer && styles.optionCorrect,
+                        showResult && isSelected && !isAnswer && styles.optionWrong
+                      ]}
+                      onPress={() => handleAnswer(option)}
+                    >
+                      <Text style={[styles.optionText, (isSelected || (showResult && isAnswer)) && { color: "#FFF" }]}>{option}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {step === "result" && (
+            <View style={styles.triviaStart}>
+              <Ionicons name={score >= 3 ? "trophy" : "alert-circle"} size={64} color={score >= 3 ? Colors.accent : Colors.textMuted} />
+              <Text style={styles.resultTitle}>{score >= 3 ? "Victory!" : "Defeat"}</Text>
+              <Text style={styles.triviaText}>You answered {score} out of 5 questions correctly.</Text>
+              <Text style={styles.xpGained}>+{score * 5 + (score === 5 ? 25 : 0)} XP Earned</Text>
+              <Pressable style={styles.primaryBtn} onPress={onClose}>
+                <Text style={styles.primaryBtnText}>Return to Profile</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function JourneyMap() {
+  // Simplified Java Map Path
+  const javaPath = "M10,40 L50,35 L100,40 L150,45 L200,40 L250,45 L300,50 L300,70 L250,75 L200,70 L150,75 L100,70 L50,75 L10,70 Z";
+  
+  const regions = [
+    { name: "Sriwijaya", x: 30, y: 30, color: "#D4A843", id: 1 },
+    { name: "Mataram", x: 120, y: 55, color: "#5B8A6E", id: 2 },
+    { name: "Singhasari", x: 220, y: 60, color: "#8B4513", id: 3 },
+    { name: "Majapahit", x: 200, y: 45, color: "#C4622D", id: 4 },
+    { name: "Demak", x: 140, y: 35, color: "#2D5A3D", id: 5 },
+  ];
+
+  return (
+    <View style={styles.mapContainer}>
+      <Svg width={width - 40} height={150} viewBox="0 0 320 100">
+        <Path d={javaPath} fill={Colors.bark} stroke={Colors.border} strokeWidth="1" />
+        {regions.map((r) => (
+          <G key={r.id} onPress={() => router.push("/kingdoms")}>
+            <Path 
+              d={`M${r.x},${r.y} a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0`} 
+              fill={r.color} 
+            />
+            <SvgText
+              x={r.x}
+              y={r.y - 8}
+              fill={Colors.textMuted}
+              fontSize="8"
+              fontFamily="Inter_600SemiBold"
+              textAnchor="middle"
+            >
+              {r.name}
+            </SvgText>
+          </G>
+        ))}
+      </Svg>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const [language, setLanguage] = useState<"en" | "id">("en");
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
-  const { totalItems } = useCart();
+  const { level, xp, title, inventory, completedQuestIds, battleWins, battleTotal, gainXP, completeQuest, addToInventory } = useGame();
+  const [showBattle, setShowBattle] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPadding = Platform.OS === "web" ? 34 : 0;
+  const dailyQuests = useMemo(() => getDailyQuests(), []);
+  
+  const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
+  const contentBottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + insets.bottom;
 
-  const earnedCount = ACHIEVEMENTS.filter(a => a.earned).length;
+  const xpNext = useMemo(() => {
+    if (level === 1) return 100;
+    if (level === 2) return 250;
+    if (level === 3) return 500;
+    if (level === 4) return 900;
+    if (level < 10) return 900 + (level - 4) * 500;
+    return 900 + (5 * 500) + (level - 9) * 1000;
+  }, [level]);
+
+  const progress = (xp / xpNext) * 100;
+
+  const handleClaimQuest = (quest: Quest) => {
+    completeQuest(quest.id, quest.xpReward);
+    addToInventory(quest.itemRewardId);
+  };
 
   return (
-    <View style={[styles.container, { paddingBottom: bottomPadding }]}>
+    <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ paddingTop: topPadding, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: topPadding, paddingBottom: contentBottomPadding }}
       >
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <LinearGradient
-            colors={["#1A0A00", Colors.bark, "#2D1A0A"]}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.batikAccent} />
-          <View style={styles.profileInfo}>
-            <View style={styles.avatar}>
-              <LinearGradient
-                colors={[Colors.primary, Colors.terracottaDark]}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.avatarText}>N</Text>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <LinearGradient colors={["#1A0A00", Colors.backgroundSecondary]} style={StyleSheet.absoluteFill} />
+          <View style={styles.headerTop}>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>{level}</Text>
             </View>
-            <View style={styles.profileText}>
-              <Text style={styles.profileName}>Nusantara Explorer</Text>
-              <Text style={styles.profileLevel}>Level 3 · Heritage Seeker</Text>
-              <View style={styles.profileBadge}>
-                <Ionicons name="location" size={12} color={Colors.accent} />
-                <Text style={styles.profileBadgeText}>Indonesia Journey</Text>
-              </View>
+            <View style={styles.headerInfo}>
+              <Text style={styles.userName}>Nusantara Explorer</Text>
+              <Text style={styles.userTitle}>{title}</Text>
             </View>
+            <Pressable style={styles.settingsBtn} onPress={() => setShowSettings(true)}>
+              <Ionicons name="settings-outline" size={22} color={Colors.text} />
+            </Pressable>
           </View>
-          <View style={styles.xpBar}>
-            <View style={styles.xpBarTrack}>
-              <View style={[styles.xpBarFill, { width: "62%" }]}>
+          
+          <View style={styles.xpSection}>
+            <View style={styles.xpHeader}>
+              <Text style={styles.xpLabel}>Experience Points</Text>
+              <Text style={styles.xpValue}>{xp} / {xpNext} XP</Text>
+            </View>
+            <View style={styles.xpBar}>
+              <View style={[styles.xpFill, { width: `${progress}%` }]}>
                 <LinearGradient
                   colors={[Colors.primary, Colors.accent]}
-                  style={StyleSheet.absoluteFill}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
                 />
               </View>
             </View>
-            <Text style={styles.xpText}>620 / 1000 XP</Text>
           </View>
         </View>
 
-        {/* Impact Stats */}
+        {/* Daily Quests */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Impact</Text>
-          <View style={styles.statsGrid}>
-            {IMPACT_STATS.map((stat, i) => (
-              <View key={i} style={styles.statCard}>
-                <View style={[styles.statIcon, { backgroundColor: stat.color + "20" }]}>
-                  <Ionicons name={stat.icon as any} size={18} color={stat.color} />
+          <Text style={styles.sectionTitle}>Daily Quests</Text>
+          {dailyQuests.map((quest) => {
+            const isDone = completedQuestIds.includes(quest.id);
+            return (
+              <View key={quest.id} style={[styles.questCard, isDone && styles.questCardDone]}>
+                <View style={styles.questIcon}>
+                  <Ionicons name={quest.icon as any} size={24} color={isDone ? Colors.textMuted : Colors.accent} />
                 </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Achievements */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Achievements</Text>
-            <Text style={styles.sectionCount}>{earnedCount}/{ACHIEVEMENTS.length}</Text>
-          </View>
-          <View style={styles.achievementsGrid}>
-            {ACHIEVEMENTS.map(achievement => (
-              <View
-                key={achievement.id}
-                style={[styles.achievementCard, !achievement.earned && styles.achievementCardLocked]}
-              >
-                <View style={[styles.achievementIcon, {
-                  backgroundColor: achievement.earned ? achievement.color + "25" : Colors.border + "50"
-                }]}>
-                  <Ionicons
-                    name={achievement.icon as any}
-                    size={22}
-                    color={achievement.earned ? achievement.color : Colors.textMuted}
-                  />
-                  {!achievement.earned && (
-                    <View style={styles.lockOverlay}>
-                      <Ionicons name="lock-closed" size={12} color={Colors.textMuted} />
-                    </View>
-                  )}
+                <View style={styles.questInfo}>
+                  <Text style={[styles.questTitle, isDone && styles.textMuted]}>{quest.title}</Text>
+                  <Text style={styles.questReward}>{quest.xpReward} XP + Item</Text>
                 </View>
-                <Text style={[styles.achievementName, !achievement.earned && styles.achievementNameLocked]}>
-                  {achievement.name}
-                </Text>
-                <Text style={styles.achievementDesc} numberOfLines={2}>{achievement.desc}</Text>
+                <Pressable 
+                  style={[styles.questBtn, isDone && styles.questBtnDone]}
+                  onPress={() => !isDone && handleClaimQuest(quest)}
+                  disabled={isDone}
+                >
+                  <Text style={styles.questBtnText}>{isDone ? "Done" : "Claim"}</Text>
+                </Pressable>
               </View>
-            ))}
-          </View>
+            );
+          })}
         </View>
 
-        {/* Economic Impact Section */}
+        {/* Cultural Battle */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Economic Impact</Text>
-          <View style={styles.impactCard}>
-            <LinearGradient
-              colors={[Colors.forestDeep, Colors.forest + "80"]}
-              style={styles.impactCardGrad}
-            />
-            <View style={styles.impactCardContent}>
-              <Text style={styles.impactTitle}>You're making a difference!</Text>
-              <Text style={styles.impactDesc}>
-                By exploring Indonesian heritage and supporting UMKM, you're contributing to local economic growth and cultural preservation.
-              </Text>
-              <View style={styles.impactMetrics}>
-                {[
-                  { label: "Artisans supported", value: "3 families" },
-                  { label: "Cultural sites learned", value: "7 locations" },
-                  { label: "Heritage knowledge", value: "Level 3" },
-                ].map((m, i) => (
-                  <View key={i} style={styles.impactMetric}>
-                    <View style={styles.impactDot} />
-                    <Text style={styles.impactMetricLabel}>{m.label}:</Text>
-                    <Text style={styles.impactMetricValue}>{m.value}</Text>
+          <Text style={styles.sectionTitle}>Cultural Battle</Text>
+          <Pressable style={styles.battleCard} onPress={() => setShowBattle(true)}>
+            <LinearGradient colors={[Colors.forest, Colors.forestDeep]} style={styles.battleGrad} />
+            <View style={styles.battleContent}>
+              <View>
+                <Text style={styles.battleTitle}>Trivia Arena</Text>
+                <Text style={styles.battleStats}>{battleWins} Wins / {battleTotal} Total</Text>
+              </View>
+              <View style={styles.battleBtn}>
+                <Text style={styles.battleBtnText}>Enter</Text>
+                <Ionicons name="chevron-forward" size={16} color="#FFF" />
+              </View>
+            </View>
+          </Pressable>
+        </View>
+
+        {/* Journey Map */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Journey Map</Text>
+          <JourneyMap />
+        </View>
+
+        {/* Inventory */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>My Collection</Text>
+          <View style={styles.inventoryGrid}>
+            {INVENTORY_ITEMS.map((item) => {
+              const owned = inventory.find(i => i.id === item.id);
+              return (
+                <View key={item.id} style={[styles.itemCard, !owned && styles.itemLocked]}>
+                  <View style={[styles.itemIconContainer, { borderColor: owned ? RARITY_COLORS[item.rarity] : Colors.border }]}>
+                    <MaterialCommunityIcons 
+                      name={item.icon as any} 
+                      size={24} 
+                      color={owned ? RARITY_COLORS[item.rarity] : Colors.textMuted} 
+                    />
+                    {owned && owned.count > 1 && (
+                      <View style={styles.itemCount}>
+                        <Text style={styles.itemCountText}>{owned.count}</Text>
+                      </View>
+                    )}
                   </View>
-                ))}
-              </View>
-            </View>
+                  <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={[styles.itemRarity, { color: owned ? RARITY_COLORS[item.rarity] : Colors.textMuted }]}>{item.rarity}</Text>
+                </View>
+              );
+            })}
           </View>
-        </View>
-
-        {/* Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.settingsCard}>
-            {/* Language Toggle */}
-            <View style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: Colors.accent + "20" }]}>
-                  <Ionicons name="globe" size={18} color={Colors.accent} />
-                </View>
-                <View>
-                  <Text style={styles.settingLabel}>Language</Text>
-                  <Text style={styles.settingDesc}>App display language</Text>
-                </View>
-              </View>
-              <View style={styles.languageToggle}>
-                <Pressable
-                  style={[styles.langBtn, language === "en" && styles.langBtnActive]}
-                  onPress={() => setLanguage("en")}
-                >
-                  <Text style={[styles.langBtnText, language === "en" && styles.langBtnTextActive]}>EN</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.langBtn, language === "id" && styles.langBtnActive]}
-                  onPress={() => setLanguage("id")}
-                >
-                  <Text style={[styles.langBtnText, language === "id" && styles.langBtnTextActive]}>ID</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.settingDivider} />
-
-            <View style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: Colors.primary + "20" }]}>
-                  <Ionicons name="notifications" size={18} color={Colors.primary} />
-                </View>
-                <View>
-                  <Text style={styles.settingLabel}>Notifications</Text>
-                  <Text style={styles.settingDesc}>Heritage updates & deals</Text>
-                </View>
-              </View>
-              <Switch
-                value={notifications}
-                onValueChange={setNotifications}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor={notifications ? Colors.text : Colors.textMuted}
-              />
-            </View>
-
-            <View style={styles.settingDivider} />
-
-            <View style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: Colors.jade + "20" }]}>
-                  <Ionicons name="moon" size={18} color={Colors.jade} />
-                </View>
-                <View>
-                  <Text style={styles.settingLabel}>Dark Mode</Text>
-                  <Text style={styles.settingDesc}>Cultural night aesthetic</Text>
-                </View>
-              </View>
-              <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: Colors.border, true: Colors.jade }}
-                thumbColor={darkMode ? Colors.text : Colors.textMuted}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* PIDI Info */}
-        <View style={[styles.section, styles.pidiSection]}>
-          <LinearGradient
-            colors={[Colors.primary + "20", Colors.accent + "10"]}
-            style={styles.pidiCard}
-          >
-            <View style={styles.pidiHeader}>
-              <Ionicons name="trophy" size={20} color={Colors.accent} />
-              <Text style={styles.pidiTitle}>PIDI DIGDAYA 2026</Text>
-            </View>
-            <Text style={styles.pidiDesc}>
-              Nusantara Journey supports Indonesia's digital economy by connecting cultural heritage tourism with local UMKM artisans through AI-powered storytelling.
-            </Text>
-            <View style={styles.pidiTags}>
-              {["Digitalisasi Pariwisata", "Ekonomi Kreatif", "UMKM Digital"].map((tag, i) => (
-                <View key={i} style={styles.pidiTag}>
-                  <Text style={styles.pidiTagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          </LinearGradient>
         </View>
       </ScrollView>
+
+      <TriviaModal visible={showBattle} onClose={() => setShowBattle(false)} />
+      
+      {/* Settings Modal */}
+      <Modal visible={showSettings} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Settings</Text>
+              <Pressable onPress={() => setShowSettings(false)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.settingsScroll}>
+              <View style={styles.settingItem}>
+                <Text style={styles.settingText}>Language</Text>
+                <Text style={styles.settingValue}>English</Text>
+              </View>
+              <View style={styles.settingItem}>
+                <Text style={styles.settingText}>Notifications</Text>
+                <Ionicons name="toggle" size={32} color={Colors.primary} />
+              </View>
+              <View style={styles.settingDivider} />
+              <View style={styles.settingItem}>
+                <Text style={styles.settingText}>PIDI DIGDAYA 2026</Text>
+                <Ionicons name="medal" size={24} color={Colors.accent} />
+              </View>
+              <Pressable style={styles.settingItem} onPress={() => {}}>
+                <Text style={styles.settingText}>GitHub Repository</Text>
+                <Ionicons name="logo-github" size={24} color={Colors.text} />
+              </Pressable>
+              <View style={styles.versionInfo}>
+                <Text style={styles.versionText}>Nusantara Journey v1.0.0</Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  profileHeader: { padding: 24, paddingBottom: 20, overflow: "hidden" },
-  batikAccent: {
-    position: "absolute", top: -30, right: -30,
-    width: 120, height: 120,
-    borderWidth: 2, borderColor: Colors.accent + "15",
-    transform: [{ rotate: "45deg" }],
-  },
-  profileInfo: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 20 },
-  avatar: {
-    width: 64, height: 64, borderRadius: 32,
-    overflow: "hidden", alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: Colors.primary,
-  },
-  avatarText: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#FFF", zIndex: 1 },
-  profileText: { flex: 1 },
-  profileName: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 3 },
-  profileLevel: { fontSize: 13, color: Colors.accent, fontFamily: "Inter_500Medium", marginBottom: 6 },
-  profileBadge: { flexDirection: "row", alignItems: "center", gap: 5 },
-  profileBadgeText: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_400Regular" },
-  xpBar: { gap: 6 },
-  xpBarTrack: { height: 6, backgroundColor: Colors.border, borderRadius: 3, overflow: "hidden" },
-  xpBarFill: { height: "100%", borderRadius: 3, overflow: "hidden" },
-  xpText: { fontSize: 11, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
-  section: { paddingHorizontal: 20, paddingTop: 24 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  sectionTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 14 },
-  sectionCount: { fontSize: 13, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  statCard: {
-    flex: 1, minWidth: "45%",
-    backgroundColor: Colors.surface,
-    borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: Colors.border,
-    alignItems: "center", gap: 6,
-  },
-  statIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  statValue: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text },
-  statLabel: { fontSize: 11, color: Colors.textMuted, fontFamily: "Inter_500Medium", textAlign: "center" },
-  achievementsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  achievementCard: {
-    width: "30%", flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 14, padding: 12,
-    borderWidth: 1, borderColor: Colors.border,
-    alignItems: "center", gap: 6,
-    minWidth: 90,
-  },
-  achievementCardLocked: { opacity: 0.6 },
-  achievementIcon: {
-    width: 44, height: 44, borderRadius: 22,
+  header: { padding: 20, paddingBottom: 30 },
+  headerTop: { flexDirection: "row", alignItems: "center", gap: 15, marginBottom: 25 },
+  levelBadge: {
+    width: 50, height: 50, borderRadius: 25,
+    backgroundColor: Colors.primary,
     alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: Colors.accent,
+  },
+  levelText: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#FFF" },
+  headerInfo: { flex: 1 },
+  userName: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
+  userTitle: { fontSize: 14, color: Colors.accent, fontFamily: "Inter_500Medium" },
+  settingsBtn: { padding: 8 },
+  xpSection: { gap: 10 },
+  xpHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+  xpLabel: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_600SemiBold" },
+  xpValue: { fontSize: 13, color: Colors.text, fontFamily: "Inter_700Bold" },
+  xpBar: { height: 8, backgroundColor: Colors.surface, borderRadius: 4, overflow: "hidden" },
+  xpFill: { height: "100%", borderRadius: 4 },
+  section: { paddingHorizontal: 20, marginBottom: 30 },
+  sectionTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 15 },
+  questCard: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: Colors.surface, borderRadius: 16,
+    padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  questCardDone: { opacity: 0.6 },
+  questIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", marginRight: 15 },
+  questInfo: { flex: 1 },
+  questTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text, marginBottom: 2 },
+  questReward: { fontSize: 12, color: Colors.accent, fontFamily: "Inter_500Medium" },
+  questBtn: { backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  questBtnDone: { backgroundColor: Colors.border },
+  questBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#FFF" },
+  battleCard: { borderRadius: 16, overflow: "hidden", height: 80 },
+  battleGrad: { ...StyleSheet.absoluteFillObject },
+  battleContent: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
+  battleTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#FFF" },
+  battleStats: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_500Medium" },
+  battleBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, gap: 4 },
+  battleBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#FFF" },
+  mapContainer: { backgroundColor: Colors.surface, borderRadius: 16, padding: 10, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
+  inventoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  itemCard: { width: (width - 60) / 3, alignItems: "center", marginBottom: 15 },
+  itemLocked: { opacity: 0.4 },
+  itemIconContainer: { 
+    width: 60, height: 60, borderRadius: 15, 
+    backgroundColor: Colors.surface, 
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 2, marginBottom: 8,
     position: "relative",
   },
-  lockOverlay: {
-    position: "absolute", bottom: -2, right: -2,
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: Colors.border,
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: Colors.backgroundSecondary,
-  },
-  achievementName: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.text, textAlign: "center" },
-  achievementNameLocked: { color: Colors.textMuted },
-  achievementDesc: { fontSize: 10, color: Colors.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 14 },
-  impactCard: { borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.forest + "50" },
-  impactCardGrad: { ...StyleSheet.absoluteFillObject },
-  impactCardContent: { padding: 18 },
-  impactTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 8 },
-  impactDesc: { fontSize: 13, color: Colors.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 18, marginBottom: 14 },
-  impactMetrics: { gap: 6 },
-  impactMetric: { flexDirection: "row", alignItems: "center", gap: 8 },
-  impactDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.forest },
-  impactMetricLabel: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
-  impactMetricValue: { fontSize: 12, color: Colors.forestLight, fontFamily: "Inter_600SemiBold" },
-  settingsCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
-    overflow: "hidden",
-  },
-  settingItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
-  settingLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  settingIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  settingLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text, marginBottom: 2 },
-  settingDesc: { fontSize: 11, color: Colors.textMuted, fontFamily: "Inter_400Regular" },
-  settingDivider: { height: 1, backgroundColor: Colors.border, marginHorizontal: 16 },
-  languageToggle: { flexDirection: "row", gap: 4 },
-  langBtn: {
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 8, borderWidth: 1, borderColor: Colors.border,
-  },
-  langBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  langBtnText: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_600SemiBold" },
-  langBtnTextActive: { color: "#FFF" },
-  pidiSection: { paddingBottom: 16 },
-  pidiCard: { borderRadius: 16, padding: 18, borderWidth: 1, borderColor: Colors.primary + "30" },
-  pidiHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
-  pidiTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.accent },
-  pidiDesc: { fontSize: 13, color: Colors.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 18, marginBottom: 14 },
-  pidiTags: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  pidiTag: {
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 20, borderWidth: 1, borderColor: Colors.primary + "50",
-    backgroundColor: Colors.primary + "15",
-  },
-  pidiTagText: { fontSize: 11, color: Colors.primaryLight, fontFamily: "Inter_500Medium" },
+  itemCount: { position: "absolute", top: -5, right: -5, backgroundColor: Colors.primary, width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  itemCountText: { fontSize: 10, color: "#FFF", fontFamily: "Inter_700Bold" },
+  itemName: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.text, textAlign: "center" },
+  itemRarity: { fontSize: 9, fontFamily: "Inter_700Bold", marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 20 },
+  modalContent: { backgroundColor: Colors.backgroundSecondary, borderRadius: 24, overflow: "hidden", maxHeight: "80%" },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: 1, borderColor: Colors.border },
+  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  triviaStart: { padding: 40, alignItems: "center", gap: 20 },
+  triviaText: { fontSize: 15, color: Colors.textSecondary, textAlign: "center", lineHeight: 22 },
+  primaryBtn: { backgroundColor: Colors.primary, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 30 },
+  primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#FFF" },
+  quizContent: { padding: 20, gap: 20 },
+  quizProgress: { fontSize: 12, color: Colors.accent, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  quizQuestion: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, lineHeight: 26 },
+  optionsGrid: { gap: 10 },
+  optionBtn: { backgroundColor: Colors.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: Colors.border },
+  optionSelected: { borderColor: Colors.accent },
+  optionCorrect: { backgroundColor: Colors.success, borderColor: Colors.success },
+  optionWrong: { backgroundColor: Colors.error, borderColor: Colors.error },
+  optionText: { fontSize: 15, color: Colors.text, fontFamily: "Inter_500Medium" },
+  resultTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text },
+  xpGained: { fontSize: 18, color: Colors.accent, fontFamily: "Inter_700Bold" },
+  settingsScroll: { padding: 10 },
+  settingItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 15, borderBottomWidth: 1, borderColor: Colors.border },
+  settingText: { fontSize: 16, color: Colors.text, fontFamily: "Inter_500Medium" },
+  settingValue: { fontSize: 14, color: Colors.textMuted },
+  settingDivider: { height: 20 },
+  versionInfo: { padding: 30, alignItems: "center" },
+  versionText: { fontSize: 12, color: Colors.textMuted },
+  textMuted: { color: Colors.textMuted },
 });

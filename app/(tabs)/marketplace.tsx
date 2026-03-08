@@ -1,17 +1,20 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable,
-  TextInput, Dimensions, Platform, ScrollView
+  TextInput, Dimensions, Platform, ScrollView, Modal
 } from "react-native";
+import { Image } from "expo-image";
+import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
+import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "@/constants/colors";
 import { useCart } from "@/context/CartContext";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useGame } from "@/context/GameContext";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
@@ -26,6 +29,7 @@ interface Product {
   rating: number;
   reviewCount: number;
   inStock: number;
+  imageUrl?: string;
 }
 
 const CATEGORIES = [
@@ -44,6 +48,7 @@ function ProductCard({ product }: { product: Product }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const { addItem } = useCart();
+  const { gainXP } = useGame();
 
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -54,6 +59,7 @@ function ProductCard({ product }: { product: Product }) {
       quantity: 1,
       origin: product.origin,
     });
+    gainXP(5, "marketplace_browse");
   };
 
   const formatPrice = (p: number) => {
@@ -70,17 +76,31 @@ function ProductCard({ product }: { product: Product }) {
       onPress={() => router.push({ pathname: "/product/[id]", params: { id: product.id } })}
     >
       <View style={styles.cardImage}>
-        <LinearGradient
-          colors={[Colors.bark, Colors.barkLight]}
+        <Image
+          source={product.imageUrl}
           style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={200}
         />
-        <Text style={styles.cardEmoji}>
-          {product.category === "batik" ? "🎨" :
-           product.category === "keris" ? "⚔️" :
-           product.category === "jewelry" ? "💎" :
-           product.category === "instruments" ? "🎵" :
-           product.category === "textiles" ? "🧵" : "🏺"}
-        </Text>
+        {!product.imageUrl && (
+          <>
+            <LinearGradient
+              colors={[Colors.bark, Colors.barkLight]}
+              style={StyleSheet.absoluteFill}
+            />
+            <MaterialCommunityIcons 
+              name={
+                product.category === "batik" ? "palette" :
+                product.category === "keris" ? "sword" :
+                product.category === "jewelry" ? "diamond-stone" :
+                product.category === "instruments" ? "music" :
+                product.category === "textiles" ? "hanger" : "hammer-wrench"
+              } 
+              size={48} 
+              color={Colors.accent + "40"} 
+            />
+          </>
+        )}
         <View style={styles.cardStockBadge}>
           <Text style={styles.cardStockText}>{product.inStock} left</Text>
         </View>
@@ -117,8 +137,9 @@ export default function MarketplaceScreen() {
   const [showCart, setShowCart] = useState(false);
   const { items, totalItems, totalPrice, removeItem, updateQuantity } = useCart();
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPadding = Platform.OS === "web" ? 34 : 0;
+  const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
+  const bottomPadding = Platform.OS === "web" ? WEB_BOTTOM_INSET : 0;
+  const contentBottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + insets.bottom;
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -200,8 +221,19 @@ export default function MarketplaceScreen() {
         </ScrollView>
       </View>
 
-      {/* Cart Sheet */}
-      {showCart && (
+      {/* Cart Sheet Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showCart}
+        onRequestClose={() => setShowCart(false)}
+      >
+        <Pressable 
+          style={styles.modalBackdrop} 
+          onPress={() => setShowCart(false)}
+        >
+          <View style={styles.modalBackdropBlur} />
+        </Pressable>
         <View style={styles.cartSheet}>
           <View style={styles.cartSheetHeader}>
             <Text style={styles.cartSheetTitle}>Cart ({totalItems})</Text>
@@ -250,7 +282,7 @@ export default function MarketplaceScreen() {
             </ScrollView>
           )}
         </View>
-      )}
+      </Modal>
 
       {/* Products Grid */}
       {isLoading ? (
@@ -316,7 +348,7 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   catChipText: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
   catChipTextActive: { color: "#FFF" },
-  grid: { padding: 16, paddingBottom: 120 },
+  grid: { padding: 16 },
   row: { gap: 12, marginBottom: 12 },
   card: {
     width: CARD_WIDTH,
@@ -352,11 +384,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: "center", justifyContent: "center",
   },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+  },
+  modalBackdropBlur: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
   cartSheet: {
-    position: "absolute", top: 0, right: 0, bottom: 0, width: "85%",
+    position: "absolute", bottom: 0, right: 0, left: 0, height: "80%",
     backgroundColor: Colors.backgroundSecondary,
-    borderLeftWidth: 1, borderColor: Colors.border,
-    zIndex: 100, paddingTop: 60,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    borderTopWidth: 1, borderColor: Colors.border,
+    paddingTop: 12,
   },
   cartSheetHeader: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",

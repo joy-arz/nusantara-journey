@@ -9,8 +9,8 @@ import {
 import { eq, desc, sql } from "drizzle-orm";
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1",
 });
 
 const NUSANTARA_SYSTEM_PROMPT = `You are Arjuna, an expert AI guide for Indonesian cultural heritage, history, and tourism. You have deep knowledge of:
@@ -41,24 +41,131 @@ LANGUAGES: Explain Indonesian/Javanese/Balinese cultural terms with context
 Always respond in English unless asked for Indonesian. Be engaging, educational, and inspire tourism to Indonesia. When discussing heritage sites, mention nearby UMKM and authentic experiences. Keep responses concise (2-4 paragraphs) but rich with cultural detail.`;
 
 async function seedProducts() {
-  const count = await db.select({ count: sql`count(*)` }).from(products);
-  if (Number(count[0].count) > 0) return;
+  const currentProducts = await db.select().from(products);
+  const needsReseed = currentProducts.length === 0 || currentProducts.some(p => p.imageUrl === null);
+
+  if (!needsReseed) return;
+
+  // Clear existing products if we need to reseed
+  if (currentProducts.length > 0) {
+    await db.delete(products);
+  }
 
   const seedData = [
-    { name: "Batik Megamendung", description: "Classic Cirebon cloud motif batik handcrafted by master artisans. Each piece takes 3-7 days of careful hand-drawing. Symbol of Cirebon's royal heritage.", price: 185000, category: "batik", origin: "Cirebon, West Java", rating: 4.9, reviewCount: 124, inStock: 15 },
-    { name: "Keris Majapahit Replica", description: "Hand-forged keris with pamor (damascus-like) pattern. Blessed by Javanese craftsman following ancient tradition. Includes wooden sheath.", price: 650000, category: "keris", origin: "Madura, East Java", rating: 4.8, reviewCount: 67, inStock: 5 },
-    { name: "Batik Parang Rusak", description: "Royal Solo batik with diagonal knife-wave pattern. Originally worn only by royalty. Made with natural indigo and soga brown dyes.", price: 320000, category: "batik", origin: "Surakarta, Central Java", rating: 4.7, reviewCount: 89, inStock: 12 },
-    { name: "Wayang Kulit Set", description: "Set of 5 Pandawa heroes carved from buffalo hide. Includes Arjuna, Bima, Yudhistira, Nakula, Sadewa. Each puppet is individually painted.", price: 1200000, category: "crafts", origin: "Yogyakarta, Central Java", rating: 5.0, reviewCount: 43, inStock: 3 },
-    { name: "Silver Kotagede Ring", description: "925 sterling silver ring with traditional Javanese relief motif. Handcrafted by 4th generation silver artisan from Kotagede, Yogyakarta.", price: 275000, category: "jewelry", origin: "Kotagede, Yogyakarta", rating: 4.6, reviewCount: 156, inStock: 20 },
-    { name: "Tenun Ikat Sumba", description: "Traditional hand-woven textile from Sumba island. Uses natural dyes from indigo, morinda root, and teak bark. Each piece is unique.", price: 850000, category: "textiles", origin: "Sumba, East Nusa Tenggara", rating: 4.9, reviewCount: 38, inStock: 7 },
-    { name: "Ukiran Jepara Frame", description: "Intricate teak wood carving in floral arabesque style. Perfect for displaying batik or as decorative art. Signature Jepara craftsmanship.", price: 425000, category: "crafts", origin: "Jepara, Central Java", rating: 4.7, reviewCount: 72, inStock: 8 },
-    { name: "Gamelan Mini Set", description: "Decorative miniature gamelan set with 6 instruments in bonze/brass. Actual playable instruments at small scale. Includes care guide.", price: 980000, category: "instruments", origin: "Surakarta, Central Java", rating: 4.8, reviewCount: 29, inStock: 4 },
-    { name: "Batik Kawung Tulis", description: "Ancient geometric batik featuring four-petal circular motifs. One of the oldest batik patterns in Java. Hand-drawn (tulis), not stamped.", price: 245000, category: "batik", origin: "Yogyakarta, Central Java", rating: 4.8, reviewCount: 101, inStock: 18 },
-    { name: "Topeng Malangan Mask", description: "Traditional Malang dance mask depicting Panji the noble hero. Carved from light hibiscus wood and painted with mineral pigments.", price: 375000, category: "crafts", origin: "Malang, East Java", rating: 4.9, reviewCount: 55, inStock: 6 },
+    { 
+      name: "Batik Megamendung", 
+      description: "Classic Cirebon cloud motif batik handcrafted by master artisans. Each piece takes 3-7 days of careful hand-drawing. Symbol of Cirebon's royal heritage.", 
+      price: 185000, 
+      category: "batik", 
+      origin: "Cirebon, West Java", 
+      rating: 4.9, 
+      reviewCount: 124, 
+      inStock: 15,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Batik_Megamendung.jpg/400px-Batik_Megamendung.jpg"
+    },
+    { 
+      name: "Keris Majapahit Replica", 
+      description: "Hand-forged keris with pamor (damascus-like) pattern. Blessed by Javanese craftsman following ancient tradition. Includes wooden sheath.", 
+      price: 650000, 
+      category: "keris", 
+      origin: "Madura, East Java", 
+      rating: 4.8, 
+      reviewCount: 67, 
+      inStock: 5,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Keris_Majapahit.jpg/400px-Keris_Majapahit.jpg"
+    },
+    { 
+      name: "Batik Parang Rusak", 
+      description: "Royal Solo batik with diagonal knife-wave pattern. Originally worn only by royalty. Made with natural indigo and soga brown dyes.", 
+      price: 320000, 
+      category: "batik", 
+      origin: "Surakarta, Central Java", 
+      rating: 4.7, 
+      reviewCount: 89, 
+      inStock: 12,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Batik_parang.jpg/400px-Batik_parang.jpg"
+    },
+    { 
+      name: "Wayang Kulit Set", 
+      description: "Set of 5 Pandawa heroes carved from buffalo hide. Includes Arjuna, Bima, Yudhistira, Nakula, Sadewa. Each puppet is individually painted.", 
+      price: 1200000, 
+      category: "crafts", 
+      origin: "Yogyakarta, Central Java", 
+      rating: 5.0, 
+      reviewCount: 43, 
+      inStock: 3,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Wayang_Kulit.jpg/400px-Wayang_Kulit.jpg"
+    },
+    { 
+      name: "Silver Kotagede Ring", 
+      description: "925 sterling silver ring with traditional Javanese relief motif. Handcrafted by 4th generation silver artisan from Kotagede, Yogyakarta.", 
+      price: 275000, 
+      category: "jewelry", 
+      origin: "Kotagede, Yogyakarta", 
+      rating: 4.6, 
+      reviewCount: 156, 
+      inStock: 20,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Kotagede_silverwork.jpg/400px-Kotagede_silverwork.jpg"
+    },
+    { 
+      name: "Tenun Ikat Sumba", 
+      description: "Traditional hand-woven textile from Sumba island. Uses natural dyes from indigo, morinda root, and teak bark. Each piece is unique.", 
+      price: 850000, 
+      category: "textiles", 
+      origin: "Sumba, East Nusa Tenggara", 
+      rating: 4.9, 
+      reviewCount: 38, 
+      inStock: 7,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Sumba_ikat.jpg/400px-Sumba_ikat.jpg"
+    },
+    { 
+      name: "Ukiran Jepara Frame", 
+      description: "Intricate teak wood carving in floral arabesque style. Perfect for displaying batik or as decorative art. Signature Jepara craftsmanship.", 
+      price: 425000, 
+      category: "crafts", 
+      origin: "Jepara, Central Java", 
+      rating: 4.7, 
+      reviewCount: 72, 
+      inStock: 8,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Jepara_wood_carving.jpg/400px-Jepara_wood_carving.jpg"
+    },
+    { 
+      name: "Gamelan Mini Set", 
+      description: "Decorative miniature gamelan set with 6 instruments in bonze/brass. Actual playable instruments at small scale. Includes care guide.", 
+      price: 980000, 
+      category: "instruments", 
+      origin: "Surakarta, Central Java", 
+      rating: 4.8, 
+      reviewCount: 29, 
+      inStock: 4,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Gamelan.jpg/400px-Gamelan.jpg"
+    },
+    { 
+      name: "Batik Kawung Tulis", 
+      description: "Ancient geometric batik featuring four-petal circular motifs. One of the oldest batik patterns in Java. Hand-drawn (tulis), not stamped.", 
+      price: 245000, 
+      category: "batik", 
+      origin: "Yogyakarta, Central Java", 
+      rating: 4.8, 
+      reviewCount: 101, 
+      inStock: 18,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Kawung_batik.jpg/400px-Kawung_batik.jpg"
+    },
+    { 
+      name: "Topeng Malangan Mask", 
+      description: "Traditional Malang dance mask depicting Panji the noble hero. Carved from light hibiscus wood and painted with mineral pigments.", 
+      price: 375000, 
+      category: "crafts", 
+      origin: "Malang, East Java", 
+      rating: 4.9, 
+      reviewCount: 55, 
+      inStock: 6,
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Topeng_Malang.jpg/400px-Topeng_Malang.jpg"
+    },
   ];
 
   for (const item of seedData) {
-    await db.insert(products).values({ ...item, imageUrl: null }).catch(() => {});
+    await db.insert(products).values(item).catch(() => {});
   }
 }
 

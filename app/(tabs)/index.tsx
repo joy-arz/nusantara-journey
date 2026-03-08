@@ -1,16 +1,21 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Dimensions, Platform, ImageBackground
+  Dimensions, Platform, ImageBackground, ActivityIndicator
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
-  useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate,
+  withRepeat, withSequence
 } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
+
+import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
+import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { Place } from "@/constants/places-data";
 
 const { width, height } = Dimensions.get("window");
 
@@ -21,10 +26,10 @@ const KINGDOMS = [
 ];
 
 const CREATURES = [
-  { name: "Garuda", type: "Divine Eagle", desc: "Sacred mount of Vishnu", emoji: "🦅" },
-  { name: "Nyai Roro Kidul", type: "Sea Queen", desc: "Ruler of the Southern Sea", emoji: "🌊" },
-  { name: "Barong", type: "Lion Spirit", desc: "Protector of Bali", emoji: "🦁" },
-  { name: "Kuntilanak", type: "Spirit", desc: "Wandering forest spirit", emoji: "👻" },
+  { name: "Garuda", type: "Divine Eagle", desc: "Sacred mount of Vishnu", icon: "bird" },
+  { name: "Nyai Roro Kidul", type: "Sea Queen", desc: "Ruler of the Southern Sea", icon: "waves" },
+  { name: "Barong", type: "Lion Spirit", desc: "Protector of Bali", icon: "shield-star" },
+  { name: "Kuntilanak", type: "Spirit", desc: "Wandering forest spirit", icon: "ghost" },
 ];
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -71,8 +76,8 @@ function CreatureCard({ creature }: { creature: typeof CREATURES[0] }) {
       onPressOut={() => { scale.value = withSpring(1); }}
       onPress={() => router.push("/guide")}
     >
-      <View style={styles.creatureEmoji}>
-        <Text style={{ fontSize: 32 }}>{creature.emoji}</Text>
+      <View style={styles.creatureIcon}>
+        <MaterialCommunityIcons name={creature.icon as any} size={32} color={Colors.accent} />
       </View>
       <Text style={styles.creatureName}>{creature.name}</Text>
       <Text style={styles.creatureType}>{creature.type}</Text>
@@ -81,11 +86,211 @@ function CreatureCard({ creature }: { creature: typeof CREATURES[0] }) {
   );
 }
 
+function PlaceCard({ place, userCoords }: { place: Place, userCoords: { latitude: number, longitude: number } | null }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const distance = useMemo(() => {
+    if (!userCoords) return null;
+    const R = 6371;
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const dLat = toRad(place.lat - userCoords.latitude);
+    const dLng = toRad(place.lng - userCoords.longitude);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(userCoords.latitude)) * Math.cos(toRad(place.lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return (R * c).toFixed(1);
+  }, [place, userCoords]);
+
+  const handlePress = () => {
+    router.push({
+      pathname: "/guide",
+      params: { 
+        initialMessage: `Tell me about ${place.name} and its connection to ${place.kingdom}`
+      }
+    });
+  };
+
+  return (
+    <AnimatedPressable
+      style={[styles.placeCard, animStyle]}
+      onPressIn={() => { scale.value = withSpring(0.95); }}
+      onPressOut={() => { scale.value = withSpring(1); }}
+      onPress={handlePress}
+    >
+      <View style={styles.placeCardHeader}>
+        <View style={styles.placeIconBox}>
+          <Ionicons 
+            name={place.type === 'heritage' ? "trail-sign" : place.type === 'museum' ? "library" : "hammer"} 
+            size={20} 
+            color={Colors.accent} 
+          />
+        </View>
+        {distance && (
+          <View style={styles.distanceBadge}>
+            <Ionicons name="navigate" size={10} color={Colors.text} />
+            <Text style={styles.distanceText}>{distance} km</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.placeName} numberOfLines={1}>{place.name}</Text>
+      <Text style={styles.placeDesc} numberOfLines={1}>{place.description}</Text>
+    </AnimatedPressable>
+  );
+}
+
+function LocationDiscoverySection() {
+  const { 
+    kingdom, 
+    nearbyHeritageSites, 
+    nearbyMuseums, 
+    nearbyUMKM, 
+    userCoords, 
+    regionName, 
+    isLoading, 
+    permissionDenied, 
+    isOutsideIndonesia 
+  } = useNearbyPlaces();
+
+  const pulse = useSharedValue(1);
+
+  React.useEffect(() => {
+    if (isLoading) {
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(0.6, { duration: 800 }),
+          withTiming(1, { duration: 800 })
+        ),
+        -1,
+        true
+      );
+    } else {
+      pulse.value = 1;
+    }
+  }, [isLoading]);
+
+  const skeletonStyle = useAnimatedStyle(() => ({
+    opacity: pulse.value
+  }));
+
+  if (isLoading) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Where You Are</Text>
+        </View>
+        <Animated.View style={[styles.discoverySkeleton, skeletonStyle]}>
+          <Ionicons name="locate" size={32} color={Colors.textMuted} />
+          <Text style={styles.skeletonText}>Locating your kingdom...</Text>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  if (permissionDenied) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Discovery</Text>
+        </View>
+        <View style={styles.softCard}>
+          <Ionicons name="location-outline" size={32} color={Colors.accent} />
+          <Text style={styles.softCardText}>Enable location to discover your kingdom and nearby heritage sites</Text>
+          <Pressable style={styles.softCardButton} onPress={() => Location.requestForegroundPermissionsAsync()}>
+            <Text style={styles.softCardButtonText}>Enable Location</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  if (isOutsideIndonesia) {
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Plan Your Journey</Text>
+        </View>
+        <View style={styles.softCard}>
+          <Text style={styles.softCardTitle}>Nusantara Awaits</Text>
+          <Text style={styles.softCardText}>You are currently outside Indonesia. Explore these top destination regions:</Text>
+          <View style={styles.destList}>
+            {['Yogyakarta (Mataram)', 'Bali (Majapahit Heritage)', 'Sumatra (Sriwijaya)'].map((dest, i) => (
+              <View key={i} style={styles.destItem}>
+                <Ionicons name="airplane" size={14} color={Colors.accent} />
+                <Text style={styles.destItemText}>{dest}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Where You Are</Text>
+        <Text style={styles.regionTag}>{regionName || 'Indonesia'}</Text>
+      </View>
+      
+      {kingdom && (
+        <Pressable style={styles.kingdomBanner} onPress={() => router.push("/kingdoms")}>
+          <LinearGradient
+            colors={[kingdom.color, kingdom.color + "AA"]}
+            style={styles.kingdomBannerGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.kingdomBannerContent}>
+              <Text style={styles.kingdomBannerPeriod}>{kingdom.period}</Text>
+              <Text style={styles.kingdomBannerName}>{kingdom.name}</Text>
+              <Text style={styles.kingdomBannerDesc} numberOfLines={1}>{kingdom.description}</Text>
+            </View>
+            <MaterialCommunityIcons name="crown" size={40} color="rgba(255,255,255,0.3)" />
+          </LinearGradient>
+        </Pressable>
+      )}
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        {nearbyHeritageSites.map(site => (
+          <PlaceCard key={site.id} place={site} userCoords={userCoords} />
+        ))}
+      </ScrollView>
+
+      <View style={styles.discoveryRow}>
+        <Text style={styles.discoveryRowLabel}>Nearby Museums</Text>
+        <Pressable onPress={() => router.push("/guide")}>
+          <Text style={styles.askArjuna}>Ask Arjuna</Text>
+        </Pressable>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        {nearbyMuseums.map(museum => (
+          <PlaceCard key={museum.id} place={museum} userCoords={userCoords} />
+        ))}
+      </ScrollView>
+
+      <View style={styles.discoveryRow}>
+        <Text style={styles.discoveryRowLabel}>UMKM Artisans</Text>
+        <Pressable onPress={() => router.push("/marketplace")}>
+          <Text style={styles.askArjuna}>Visit Shop</Text>
+        </Pressable>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        {nearbyUMKM.map(umkm => (
+          <PlaceCard key={umkm.id} place={umkm} userCoords={userCoords} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPadding = Platform.OS === "web" ? 34 : 0;
+  const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
+  const bottomPadding = Platform.OS === "web" ? WEB_BOTTOM_INSET : 0;
+  const contentBottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + insets.bottom;
 
   return (
     <View style={[styles.container, { paddingBottom: bottomPadding }]}>
@@ -93,7 +298,7 @@ export default function DiscoverScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
         style={styles.scroll}
-        contentContainerStyle={{ paddingTop: topPadding, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: topPadding, paddingBottom: contentBottomPadding }}
       >
         {/* Hero Section */}
         <View style={styles.hero}>
@@ -101,14 +306,17 @@ export default function DiscoverScreen() {
             colors={["#1A0A00", Colors.bark, "#2D1A0A"]}
             style={StyleSheet.absoluteFill}
           />
-          <View style={[styles.batikPattern]}>
-            {[...Array(6)].map((_, i) => (
-              <View key={i} style={[styles.batikDiamond, {
-                left: (i % 3) * 120 + 20,
-                top: Math.floor(i / 3) * 80 + 10,
-                opacity: 0.06,
-              }]} />
-            ))}
+          <View style={styles.batikPattern}>
+            <View style={styles.batikDiamondRow}>
+              {[...Array(3)].map((_, i) => (
+                <View key={i} style={styles.batikDiamond} />
+              ))}
+            </View>
+            <View style={styles.batikDiamondRow}>
+              {[...Array(3)].map((_, i) => (
+                <View key={i + 3} style={styles.batikDiamond} />
+              ))}
+            </View>
           </View>
           <View style={styles.heroContent}>
             <View style={styles.heroTag}>
@@ -132,6 +340,9 @@ export default function DiscoverScreen() {
             </View>
           </View>
         </View>
+
+        {/* Discovery Section */}
+        <LocationDiscoverySection />
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -200,7 +411,9 @@ export default function DiscoverScreen() {
               </View>
             </View>
             <View style={styles.guideBannerRight}>
-              <Text style={{ fontSize: 56 }}>🏛️</Text>
+              <View style={styles.guideBannerIcon}>
+                <Ionicons name="telescope" size={32} color={Colors.accent} />
+              </View>
             </View>
           </LinearGradient>
         </Pressable>
@@ -249,14 +462,23 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     justifyContent: "flex-end",
   },
-  batikPattern: { ...StyleSheet.absoluteFillObject },
+  batikPattern: {
+    ...StyleSheet.absoluteFillObject,
+    paddingTop: 20,
+    gap: 20,
+  },
+  batikDiamondRow: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    width: "100%",
+  },
   batikDiamond: {
-    position: "absolute",
     width: 80,
     height: 80,
     borderWidth: 2,
     borderColor: Colors.gold,
     transform: [{ rotate: "45deg" }],
+    opacity: 0.06,
   },
   heroContent: { padding: 24, paddingBottom: 32 },
   heroTag: {
@@ -314,7 +536,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  creatureEmoji: { marginBottom: 8 },
+  creatureIcon: { marginBottom: 8 },
   creatureName: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 2 },
   creatureType: { fontSize: 11, color: Colors.primary, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
   creatureDesc: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_400Regular", lineHeight: 16 },
@@ -326,6 +548,11 @@ const styles = StyleSheet.create({
   guideBannerButton: { flexDirection: "row", alignItems: "center", gap: 6 },
   guideBannerButtonText: { fontSize: 13, color: Colors.primary, fontFamily: "Inter_600SemiBold" },
   guideBannerRight: { marginLeft: 12 },
+  guideBannerIcon: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center", justifyContent: "center",
+  },
   umkmCards: { flexDirection: "row", paddingHorizontal: 20, gap: 10 },
   umkmCard: {
     flex: 1,
@@ -345,4 +572,59 @@ const styles = StyleSheet.create({
   umkmName: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.text, textAlign: "center", marginBottom: 4 },
   umkmLocation: { flexDirection: "row", alignItems: "center", gap: 3 },
   umkmLocationText: { fontSize: 10, color: Colors.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
+  
+  // Discovery Styles
+  discoverySkeleton: {
+    marginHorizontal: 20,
+    height: 140,
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12
+  },
+  skeletonText: { color: Colors.textMuted, fontFamily: "Inter_500Medium", fontSize: 14 },
+  softCard: {
+    marginHorizontal: 20,
+    padding: 24,
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    gap: 12
+  },
+  softCardTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" },
+  softCardText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center", lineHeight: 20 },
+  softCardButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 8
+  },
+  softCardButtonText: { color: "#FFF", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  destList: { width: "100%", gap: 8, marginTop: 8 },
+  destItem: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.background, padding: 12, borderRadius: 10 },
+  destItemText: { color: Colors.text, fontFamily: "Inter_500Medium" },
+  regionTag: { fontSize: 12, color: Colors.accent, fontFamily: "Inter_600SemiBold", backgroundColor: Colors.accent + "22", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+  kingdomBanner: { marginHorizontal: 20, borderRadius: 16, overflow: "hidden", marginBottom: 20 },
+  kingdomBannerGradient: { padding: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  kingdomBannerContent: { flex: 1 },
+  kingdomBannerPeriod: { fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  kingdomBannerName: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#FFF", marginVertical: 4 },
+  kingdomBannerDesc: { fontSize: 12, color: "rgba(255,255,255,0.9)", fontFamily: "Inter_400Regular" },
+  placeCard: { width: 180, backgroundColor: Colors.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: Colors.border },
+  placeCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
+  placeIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.accent + "20", alignItems: "center", justifyContent: "center" },
+  distanceBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  distanceText: { fontSize: 10, color: Colors.textSecondary, fontFamily: "Inter_600SemiBold" },
+  placeName: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 4 },
+  placeDesc: { fontSize: 11, color: Colors.textMuted, fontFamily: "Inter_400Regular" },
+  discoveryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginTop: 20, marginBottom: 12 },
+  discoveryRowLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary },
+  askArjuna: { fontSize: 12, color: Colors.accent, fontFamily: "Inter_600SemiBold" },
 });
+

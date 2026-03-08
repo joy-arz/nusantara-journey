@@ -2,14 +2,17 @@ import React from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform
 } from "react-native";
+import { Image } from "expo-image";
+import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "@/constants/colors";
 import { useCart } from "@/context/CartContext";
 import * as Haptics from "expo-haptics";
+
+import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 
 interface Product {
   id: number;
@@ -21,6 +24,7 @@ interface Product {
   rating: number;
   reviewCount: number;
   inStock: number;
+  imageUrl?: string;
 }
 
 export default function ProductDetailScreen() {
@@ -32,18 +36,14 @@ export default function ProductDetailScreen() {
     queryKey: [`/api/products/${id}`],
   });
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPadding = Platform.OS === "web" ? 34 + 16 : insets.bottom + 16;
+  const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
+  const bottomPadding = Platform.OS === "web" ? WEB_BOTTOM_INSET + 16 : insets.bottom + 16;
+  const contentBottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET + 80 : TAB_BAR_HEIGHT + insets.bottom + 80;
 
   const formatPrice = (p: number) => {
     if (p >= 1000000) return `Rp ${(p / 1000000).toFixed(1)}M`;
     if (p >= 1000) return `Rp ${(p / 1000).toFixed(0)}K`;
     return `Rp ${p}`;
-  };
-
-  const categoryEmoji: Record<string, string> = {
-    batik: "🎨", keris: "⚔️", jewelry: "💎",
-    instruments: "🎵", textiles: "🧵", crafts: "🏺",
   };
 
   if (isLoading || !product) {
@@ -70,14 +70,28 @@ export default function ProductDetailScreen() {
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomPadding + 80 }}
+        contentContainerStyle={{ paddingBottom: contentBottomPadding }}
       >
         {/* Hero */}
         <View style={styles.hero}>
-          <LinearGradient
-            colors={[Colors.bark, Colors.barkLight]}
+          <Image
+            source={product.imageUrl}
             style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={200}
           />
+          {!product.imageUrl && (
+            <LinearGradient
+              colors={[Colors.bark, Colors.barkLight]}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <View style={StyleSheet.absoluteFill}>
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.8)"]}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
           <View style={[styles.heroBg, { top: topPadding + 60 }]}>
             {[...Array(4)].map((_, i) => (
               <View key={i} style={[styles.batikCircle, {
@@ -93,9 +107,19 @@ export default function ProductDetailScreen() {
           >
             <Ionicons name="arrow-back" size={20} color={Colors.text} />
           </Pressable>
-          <Text style={styles.heroEmoji}>
-            {categoryEmoji[product.category] || "🏺"}
-          </Text>
+          {!product.imageUrl && (
+            <MaterialCommunityIcons 
+              name={
+                product.category === "batik" ? "palette" :
+                product.category === "keris" ? "sword" :
+                product.category === "jewelry" ? "diamond-stone" :
+                product.category === "instruments" ? "music" :
+                product.category === "textiles" ? "hanger" : "hammer-wrench"
+              } 
+              size={100} 
+              color={Colors.accent + "40"} 
+            />
+          )}
         </View>
 
         {/* Content */}
@@ -204,7 +228,6 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     zIndex: 10,
   },
-  heroEmoji: { fontSize: 80 },
   content: { padding: 20 },
   categoryTag: {
     alignSelf: "flex-start",
