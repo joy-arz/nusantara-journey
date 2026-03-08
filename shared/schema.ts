@@ -9,6 +9,10 @@ export const users = pgTable("users", {
     .default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  googleId: varchar("google_id"),
+  email: varchar("email"),
+  displayName: varchar("display_name"),
+  avatarUrl: varchar("avatar_url"),
 });
 
 export const conversations = pgTable("conversations", {

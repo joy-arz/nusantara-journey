@@ -10,12 +10,14 @@ Categories: Digitalisasi Pariwisata + Ekonomi Kreatif
 
 ### Frontend (Expo React Native — port 8081)
 - **Framework**: Expo Router (file-based routing)
-- **State**: React Query for server state, React Context for cart + gamification
-- **Styling**: React Native StyleSheet with Indonesian color palette
+- **State**: React Query for server state, React Context for cart + gamification + auth
+- **Styling**: React Native StyleSheet with Indonesian color palette (no LinearGradient in content cards)
 - **Fonts**: Inter (400, 500, 600, 700 weights via expo-google-fonts)
 - **Animations**: React Native Reanimated
 - **Icons**: @expo/vector-icons (Ionicons, MaterialCommunityIcons)
 - **Keyboard**: react-native-keyboard-controller@1.18.5 (pinned — must match Expo Go native binary)
+- **Maps**: react-native-maps@1.18.0 (exact — Expo Go compatible); wrapped in `components/MapWrapper.native.tsx` / `components/MapWrapper.tsx` for web fallback
+- **Auth**: AuthContext (AsyncStorage-based) with Google OAuth stub — requires EXPO_PUBLIC_GOOGLE_*_CLIENT_ID env vars
 
 ### Backend (Express + TypeScript — port 5000)
 - **Database**: PostgreSQL via Drizzle ORM
@@ -26,15 +28,24 @@ Categories: Digitalisasi Pariwisata + Ekonomi Kreatif
 
 ```
 app/
-  _layout.tsx          # Root layout with QueryClient, CartProvider, fonts
+  _layout.tsx          # Root layout with QueryClient, GameProvider, AuthProvider, CartProvider, fonts
   (tabs)/
     _layout.tsx        # Tab bar (NativeTabs for iOS 26+, classic Tabs fallback)
-    index.tsx          # Discover: hero, kingdoms preview, mythology, AI banner, UMKM
-    kingdoms.tsx       # All 10 kingdoms with expandable details
+    index.tsx          # Discover: hero, GPS kingdom detection, museums, UMKM, mythology
+    map.tsx            # Map tab: GPS map with markers, filter pills, 10 kingdoms history
     guide.tsx          # AI chat with Arjuna (streaming)
     marketplace.tsx    # UMKM product grid with cart drawer
-    profile.tsx        # Achievements, impact stats, settings
+    profile.tsx        # XP, quests, battle, inventory, Google sign-in
   product/[id].tsx     # Product detail with Add to Cart
+components/
+  MapWrapper.tsx           # Web stub (no react-native-maps import)
+  MapWrapper.native.tsx    # Native wrapper for react-native-maps
+context/
+  GameContext.tsx      # Gamification (useRef anti-crash pattern)
+  AuthContext.tsx      # Auth state + AsyncStorage persistence
+  CartContext.tsx      # Shopping cart state
+constants/
+  places-data.ts       # GPS data: 10 kingdom centroids, 12 museums, 12 UMKM, 5 heritage sites
 ```
 
 ## Key Features

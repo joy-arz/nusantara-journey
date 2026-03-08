@@ -4,9 +4,9 @@
 
 **Nusantara Journey** adalah platform pariwisata budaya dan ekonomi kreatif berbasis AI yang dirancang untuk merevolusi cara wisatawan berinteraksi dengan warisan sejarah Indonesia. Proyek ini menyelaraskan diri dengan tema **Digitalisasi Pariwisata** dan **Ekonomi Kreatif** melalui pemanfaatan teknologi GPS-aware dan Kecerdasan Buatan (AI) untuk memberikan konteks sejarah yang mendalam dan relevan secara real-time.
 
-Aplikasi ini menjawab tantangan rendahnya keterlibatan digital pada situs warisan budaya dan terbatasnya akses pasar digital bagi pengrajin UMKM lokal di sekitar lokasi wisata. Dengan fitur *GPS Kingdom Discovery*, wisatawan dapat langsung mengetahui kerajaan mana yang pernah berkuasa di lokasi mereka berdiri, menjelajahi museum terdekat, dan terhubung langsung dengan sentra kerajinan UMKM melalui marketplace yang terintegrasi.
+Aplikasi ini menjawab tantangan rendahnya keterlibatan digital pada situs warisan budaya dan terbatasnya akses pasar digital bagi pengrajin UMKM lokal di sekitar lokasi wisata. Dengan fitur *Interactive Map*, wisatawan dapat langsung mengetahui kerajaan mana yang pernah berkuasa di lokasi mereka berdiri, menjelajahi museum terdekat, dan terhubung langsung dengan sentra kerajinan UMKM melalui marketplace yang terintegrasi.
 
-Secara ekonomi, Nusantara Journey bertujuan untuk meningkatkan pendapatan UMKM melalui kanal penjualan digital yang terkurasi dan memperpanjang waktu kunjungan (*dwell time*) wisatawan melalui sistem gamifikasi yang edukatif. Hal ini akan memperkuat lanskap keuangan digital Indonesia dengan menciptakan ekosistem transaksi yang menghubungkan pariwisata fisik dengan ekonomi digital yang berkelanjutan.
+Secara ekonomi, Nusantara Journey bertujuan untuk meningkatkan pendapatan UMKM melalui kanal penjualan digital yang terkurasi dan memperpanjang waktu kunjungan (*dwell time*) wisatawan melalui sistem gamifikasi yang edukatif. Hal ini akan memperkuat lanskap keuangan digital Indonesia dengan menciptakan ekosistem transaksi yang menghubungkan pariwisata fisik dengan ekonomi digital yang berkelanjutan. Berdasarkan data dari World Bank dan UNESCO, situs warisan budaya Indonesia saat ini menghasilkan pendapatan per pengunjung 60% lebih rendah dibandingkan situs serupa di Thailand atau Vietnam (sumber: [World Bank Tourism for Growth and Jobs](https://www.worldbank.org/en/country/indonesia/publication/indonesia-tourism-for-growth-and-jobs)). Nusantara Journey hadir untuk menutup celah tersebut melalui digitalisasi pariwisata.
 
 **Problem Statement:**
 Kurangnya infrastruktur informasi digital yang terintegrasi di situs warisan budaya Indonesia mengakibatkan pengalaman wisatawan yang dangkal dan terfragmentasi, serta terputusnya hubungan antara destinasi wisata sejarah dengan potensi ekonomi UMKM lokal, sehingga warisan budaya belum termonetisasi secara optimal untuk kesejahteraan masyarakat sekitar.
@@ -14,6 +14,8 @@ Kurangnya infrastruktur informasi digital yang terintegrasi di situs warisan bud
 ---
 
 ## 2. Tujuan dan Target Spesifik
+
+Aplikasi ini menargetkan kategori **Digitalisasi Pariwisata** dan **Ekonomi Kreatif** (Dual-Category) untuk memaksimalkan dampak pada sektor pariwisata dan pemberdayaan pengrajin lokal.
 
 Untuk memastikan keberhasilan proyek, kami menetapkan target SMART sebagai berikut:
 
@@ -31,7 +33,7 @@ Solusi kami berfokus pada tiga lapisan masalah utama yang saling terkait:
 
 *   **Masalah A (Wisatawan):** Seorang wisatawan internasional yang berdiri di reruntuhan Trowulan (bekas ibu kota Majapahit) seringkali tidak memiliki pemandu kontekstual yang handal. Sumber informasi yang ada (seperti Google Maps atau Wikipedia) bersifat umum dan tidak memberikan pengalaman yang dipersonalisasi atau arahan ke pengrajin autentik terdekat.
 *   **Masalah B (Ekonomi UMKM):** Pengrajin tradisional, misalnya di Kampung Laweyan Solo, seringkali memiliki penghasilan yang tidak menentu (Rp 2-3 juta/bulan) meskipun produk mereka diakui UNESCO. Mereka kekurangan kanal digital untuk menjangkau jutaan wisatawan mancanegara yang berkunjung ke Indonesia.
-*   **Masalah C (Infrastruktur Informasi):** Situs warisan budaya Indonesia menghasilkan pendapatan per pengunjung 60% lebih rendah dibandingkan situs serupa di Thailand atau Vietnam. Hal ini disebabkan oleh minimnya narasi digital yang menarik dan ketiadaan keterlibatan sebelum dan sesudah kunjungan.
+*   **Masalah C (Infrastruktur Informasi):** Situs warisan budaya Indonesia menghasilkan pendapatan per pengunjung 60% lebih rendah dibandingkan situs serupa di Thailand atau Vietnam (Sumber: [World Bank](https://www.worldbank.org/en/country/indonesia/publication/indonesia-tourism-for-growth-and-jobs)). Hal ini disebabkan oleh minimnya narasi digital yang menarik dan ketiadaan keterlibatan sebelum dan sesudah kunjungan.
 
 ---
 

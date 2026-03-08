@@ -83,11 +83,7 @@ function ProductCard({ product }: { product: Product }) {
           transition={200}
         />
         {!product.imageUrl && (
-          <>
-            <LinearGradient
-              colors={[Colors.bark, Colors.barkLight]}
-              style={StyleSheet.absoluteFill}
-            />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.bark + "30", alignItems: 'center', justifyContent: 'center' }]}>
             <MaterialCommunityIcons 
               name={
                 product.category === "batik" ? "palette" :
@@ -99,7 +95,7 @@ function ProductCard({ product }: { product: Product }) {
               size={48} 
               color={Colors.accent + "40"} 
             />
-          </>
+          </View>
         )}
         <View style={styles.cardStockBadge}>
           <Text style={styles.cardStockText}>{product.inStock} left</Text>
@@ -200,7 +196,7 @@ export default function MarketplaceScreen() {
         {/* Categories */}
         <ScrollView
           horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categories}
+          contentContainerStyle={[styles.categories, { paddingHorizontal: 16 }]}
         >
           {CATEGORIES.map(cat => (
             <Pressable
@@ -269,15 +265,14 @@ export default function MarketplaceScreen() {
                 <Text style={styles.cartTotalLabel}>Total</Text>
                 <Text style={styles.cartTotalValue}>{formatPrice(totalPrice)}</Text>
               </View>
-              <Pressable style={styles.checkoutBtn}>
-                <LinearGradient
-                  colors={[Colors.primary, Colors.terracottaDark]}
-                  style={styles.checkoutBtnGrad}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                >
+              <Pressable 
+                style={styles.checkoutBtn}
+                onPress={() => {}}
+              >
+                <View style={styles.checkoutBtnContent}>
                   <Text style={styles.checkoutBtnText}>Checkout</Text>
                   <Ionicons name="arrow-forward" size={16} color="#FFF" />
-                </LinearGradient>
+                </View>
               </Pressable>
             </ScrollView>
           )}
@@ -341,7 +336,7 @@ const styles = StyleSheet.create({
   categories: { gap: 8, paddingBottom: 4 },
   catChip: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: 16, paddingVertical: 7,
     borderRadius: 20, borderWidth: 1, borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
@@ -356,7 +351,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.terracotta + "30",
   },
   cardImage: {
     height: 120, alignItems: "center", justifyContent: "center",
@@ -385,10 +380,6 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "transparent",
-  },
-  modalBackdropBlur: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.5)",
   },
@@ -430,8 +421,14 @@ const styles = StyleSheet.create({
   },
   cartTotalLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
   cartTotalValue: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
-  checkoutBtn: { marginHorizontal: 20, marginTop: 8, borderRadius: 14, overflow: "hidden" },
-  checkoutBtnGrad: {
+  checkoutBtn: { 
+    marginHorizontal: 20, 
+    marginTop: 8, 
+    borderRadius: 14, 
+    overflow: "hidden",
+    backgroundColor: Colors.primary,
+  },
+  checkoutBtnContent: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, paddingVertical: 16,
   },

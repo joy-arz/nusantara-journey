@@ -3,10 +3,14 @@ import { createServer, type Server } from "node:http";
 import OpenAI from "openai";
 import { db } from "./db";
 import {
-  conversations, messages, products, cartItems,
-  type Conversation, type Message, type Product
+  conversations, messages, products, cartItems, users,
+  type Conversation, type Message, type Product, type User
 } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
+import session from "express-session";
+import MemoryStore from "memorystore";
+
+const SessionStore = MemoryStore(session);
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
@@ -169,8 +173,77 @@ async function seedProducts() {
   }
 }
 
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   await seedProducts();
+
+  app.use(
+    session({
+      cookie: { maxAge: 86400000 },
+      store: new SessionStore({
+        checkPeriod: 86400000,
+      }),
+      resave: false,
+      saveUninitialized: false,
+      secret: process.env.SESSION_SECRET || "nusantara_secret",
+    })
+  );
+
+  app.post("/api/auth/google", async (req: Request, res: Response) => {
+    try {
+      const { googleId, email, displayName, avatarUrl } = req.body;
+      
+      let [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+      
+      if (!user) {
+        // Create new user, generate a temporary username
+        const username = email.split('@')[0] + "_" + Math.random().toString(36).substring(2, 5);
+        [user] = await db.insert(users).values({
+          googleId,
+          email,
+          displayName,
+          avatarUrl,
+          username,
+          password: "google_authenticated", // Placeholder
+        }).returning();
+      } else {
+        // Update user info
+        [user] = await db.update(users)
+          .set({ displayName, avatarUrl, email })
+          .where(eq(users.id, user.id))
+          .returning();
+      }
+      
+      req.session.userId = user.id;
+      res.json(user);
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: "Failed to authenticate" });
+    }
+  });
+
+  app.get("/api/auth/me", async (req: Request, res: Response) => {
+    if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
+    
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, req.session.userId));
+      if (!user) return res.status(401).json({ error: "User not found" });
+      res.json(user);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.session.destroy(() => {
+      res.status(204).send();
+    });
+  });
 
   app.get("/api/conversations", async (req: Request, res: Response) => {
     try {
@@ -181,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/conversations/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
       if (!conv) return res.status(404).json({ error: "Not found" });
       const msgs = await db.select().from(messages).where(eq(messages.conversationId, id)).orderBy(messages.createdAt);
@@ -199,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/conversations/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       await db.delete(messages).where(eq(messages.conversationId, id));
       await db.delete(conversations).where(eq(conversations.id, id));
       res.status(204).send();
@@ -208,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/conversations/:id/messages", async (req: Request, res: Response) => {
     try {
-      const conversationId = parseInt(req.params.id);
+      const conversationId = parseInt(req.params.id as string);
       const { content } = req.body;
 
       await db.insert(messages).values({ conversationId, role: "user", content });
@@ -256,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/:id", async (req: Request, res: Response) => {
     try {
-      const [product] = await db.select().from(products).where(eq(products.id, parseInt(req.params.id)));
+      const [product] = await db.select().from(products).where(eq(products.id, parseInt(req.params.id as string)));
       if (!product) return res.status(404).json({ error: "Not found" });
       res.json(product);
     } catch (e) { res.status(500).json({ error: "Failed to fetch product" }); }
@@ -267,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const items = await db.select({ cartItem: cartItems, product: products })
         .from(cartItems)
         .innerJoin(products, eq(cartItems.productId, products.id))
-        .where(eq(cartItems.sessionId, req.params.sessionId));
+        .where(eq(cartItems.sessionId, req.params.sessionId as string));
       res.json(items);
     } catch (e) { res.status(500).json({ error: "Failed to fetch cart" }); }
   });
@@ -292,14 +365,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/cart/:sessionId/:itemId", async (req: Request, res: Response) => {
     try {
-      await db.delete(cartItems).where(eq(cartItems.id, parseInt(req.params.itemId)));
+      await db.delete(cartItems).where(eq(cartItems.id, parseInt(req.params.itemId as string)));
       res.status(204).send();
     } catch (e) { res.status(500).json({ error: "Failed to remove" }); }
   });
 
   app.delete("/api/cart/:sessionId", async (req: Request, res: Response) => {
     try {
-      await db.delete(cartItems).where(eq(cartItems.sessionId, req.params.sessionId));
+      await db.delete(cartItems).where(eq(cartItems.sessionId, req.params.sessionId as string));
       res.status(204).send();
     } catch (e) { res.status(500).json({ error: "Failed to clear cart" }); }
   });

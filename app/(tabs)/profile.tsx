@@ -9,11 +9,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path, G, Text as SvgText } from "react-native-svg";
 import { Colors } from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
+import { useAuth } from "@/context/AuthContext";
 import { getDailyQuests, Quest } from "@/constants/quests";
 import { TRIVIA_QUESTIONS, TriviaQuestion } from "@/constants/trivia";
 import { INVENTORY_ITEMS, RARITY_COLORS } from "@/constants/inventory-items";
 import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 import { router } from "expo-router";
+import { Image } from "expo-image";
 
 const { width } = Dimensions.get("window");
 
@@ -139,7 +141,7 @@ function JourneyMap() {
       <Svg width={width - 40} height={150} viewBox="0 0 320 100">
         <Path d={javaPath} fill={Colors.bark} stroke={Colors.border} strokeWidth="1" />
         {regions.map((r) => (
-          <G key={r.id} onPress={() => router.push("/kingdoms")}>
+          <G key={r.id} onPress={() => router.push("/map")}>
             <Path 
               d={`M${r.x},${r.y} a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0`} 
               fill={r.color} 
@@ -149,7 +151,6 @@ function JourneyMap() {
               y={r.y - 8}
               fill={Colors.textMuted}
               fontSize="8"
-              fontFamily="Inter_600SemiBold"
               textAnchor="middle"
             >
               {r.name}
@@ -164,6 +165,7 @@ function JourneyMap() {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { level, xp, title, inventory, completedQuestIds, battleWins, battleTotal, gainXP, completeQuest, addToInventory } = useGame();
+  const { user, signInWithGoogle, signOut } = useAuth();
   const [showBattle, setShowBattle] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -192,19 +194,43 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: topPadding, paddingBottom: contentBottomPadding }}
+        contentContainerStyle={{ paddingBottom: contentBottomPadding }}
       >
         {/* Header Section */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: topPadding + 20 }]}>
           <LinearGradient colors={["#1A0A00", Colors.backgroundSecondary]} style={StyleSheet.absoluteFill} />
           <View style={styles.headerTop}>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>{level}</Text>
-            </View>
-            <View style={styles.headerInfo}>
-              <Text style={styles.userName}>Nusantara Explorer</Text>
-              <Text style={styles.userTitle}>{title}</Text>
-            </View>
+            {user ? (
+              <>
+                <View style={styles.avatarContainer}>
+                  {user.avatarUrl ? (
+                    <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                      <Ionicons name="person" size={30} color={Colors.textMuted} />
+                    </View>
+                  )}
+                  <View style={styles.avatarLevelBadge}>
+                    <Text style={styles.avatarLevelText}>{level}</Text>
+                  </View>
+                </View>
+                <View style={styles.headerInfo}>
+                  <Text style={styles.userName}>{user.displayName || "Nusantara Explorer"}</Text>
+                  <Text style={styles.userEmail}>{user.email}</Text>
+                  <Text style={styles.userTitle}>{title}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Pressable style={styles.googleLoginBtn} onPress={signInWithGoogle}>
+                  <MaterialCommunityIcons name="google" size={20} color={Colors.text} />
+                  <Text style={styles.googleLoginText}>Continue with Google</Text>
+                </Pressable>
+                <View style={styles.headerInfo}>
+                  <Text style={styles.userTitlePlaceholder}>{title}</Text>
+                </View>
+              </>
+            )}
             <Pressable style={styles.settingsBtn} onPress={() => setShowSettings(true)}>
               <Ionicons name="settings-outline" size={22} color={Colors.text} />
             </Pressable>
@@ -216,13 +242,7 @@ export default function ProfileScreen() {
               <Text style={styles.xpValue}>{xp} / {xpNext} XP</Text>
             </View>
             <View style={styles.xpBar}>
-              <View style={[styles.xpFill, { width: `${progress}%` }]}>
-                <LinearGradient
-                  colors={[Colors.primary, Colors.accent]}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={StyleSheet.absoluteFill}
-                />
-              </View>
+              <View style={[styles.xpFill, { width: `${progress}%`, backgroundColor: Colors.gold }]} />
             </View>
           </View>
         </View>
@@ -256,8 +276,18 @@ export default function ProfileScreen() {
         {/* Cultural Battle */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cultural Battle</Text>
-          <Pressable style={styles.battleCard} onPress={() => setShowBattle(true)}>
-            <LinearGradient colors={[Colors.forest, Colors.forestDeep]} style={styles.battleGrad} />
+          <Pressable 
+            style={({ pressed }) => [
+              styles.battleCard, 
+              pressed && { transform: [{ scale: 0.97 }] },
+              {
+                backgroundColor: Colors.forestDeep,
+                borderWidth: 1,
+                borderColor: Colors.forest + "80",
+              }
+            ]} 
+            onPress={() => setShowBattle(true)}
+          >
             <View style={styles.battleContent}>
               <View>
                 <Text style={styles.battleTitle}>Trivia Arena</Text>
@@ -328,6 +358,12 @@ export default function ProfileScreen() {
                 <Ionicons name="toggle" size={32} color={Colors.primary} />
               </View>
               <View style={styles.settingDivider} />
+              {user && (
+                <Pressable style={styles.settingItem} onPress={signOut}>
+                  <Text style={[styles.settingText, { color: Colors.error }]}>Sign Out</Text>
+                  <Ionicons name="log-out-outline" size={24} color={Colors.error} />
+                </Pressable>
+              )}
               <View style={styles.settingItem}>
                 <Text style={styles.settingText}>PIDI DIGDAYA 2026</Text>
                 <Ionicons name="medal" size={24} color={Colors.accent} />
@@ -360,7 +396,38 @@ const styles = StyleSheet.create({
   levelText: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#FFF" },
   headerInfo: { flex: 1 },
   userName: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
+  userEmail: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_400Regular", marginBottom: 2 },
   userTitle: { fontSize: 14, color: Colors.accent, fontFamily: "Inter_500Medium" },
+  userTitlePlaceholder: { fontSize: 14, color: Colors.accent, fontFamily: "Inter_500Medium" },
+  avatarContainer: { position: "relative" },
+  avatar: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: Colors.accent },
+  avatarPlaceholder: { backgroundColor: Colors.surface, alignItems: "center", justifyContent: "center" },
+  avatarLevelBadge: {
+    position: "absolute",
+    bottom: -5,
+    right: -5,
+    backgroundColor: Colors.primary,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: Colors.accent,
+  },
+  avatarLevelText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#FFF" },
+  googleLoginBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    gap: 10,
+  },
+  googleLoginText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
   settingsBtn: { padding: 8 },
   xpSection: { gap: 10 },
   xpHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
@@ -385,15 +452,14 @@ const styles = StyleSheet.create({
   questBtnDone: { backgroundColor: Colors.border },
   questBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#FFF" },
   battleCard: { borderRadius: 16, overflow: "hidden", height: 80 },
-  battleGrad: { ...StyleSheet.absoluteFillObject },
   battleContent: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   battleTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#FFF" },
   battleStats: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_500Medium" },
   battleBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, gap: 4 },
   battleBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#FFF" },
   mapContainer: { backgroundColor: Colors.surface, borderRadius: 16, padding: 10, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
-  inventoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  itemCard: { width: (width - 60) / 3, alignItems: "center", marginBottom: 15 },
+  inventoryGrid: { flexDirection: "row", flexWrap: "wrap" },
+  itemCard: { width: (width - 40) / 3, alignItems: "center", marginBottom: 15, paddingHorizontal: 5 },
   itemLocked: { opacity: 0.4 },
   itemIconContainer: { 
     width: 60, height: 60, borderRadius: 15, 

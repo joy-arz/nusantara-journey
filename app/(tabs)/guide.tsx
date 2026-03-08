@@ -116,6 +116,7 @@ const bubbleStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderBottomLeftRadius: 4,
+    maxWidth: "80%",
   },
   text: { fontSize: 14, lineHeight: 20, fontFamily: "Inter_400Regular" },
   textUser: { color: "#FFF" },
@@ -265,8 +266,9 @@ export default function GuideScreen() {
 
       {/* Sidebar */}
       {showSidebar && (
-        <View style={[styles.sidebar, { paddingTop: insets.top + 72 }]}>
-          <Text style={styles.sidebarTitle}>Conversations</Text>
+        <View style={[styles.sidebar, { paddingTop: insets.top }]}>
+          <View style={{ paddingTop: 20, flex: 1 }}>
+            <Text style={styles.sidebarTitle}>Conversations</Text>
           {conversations.length === 0 ? (
             <Text style={styles.sidebarEmpty}>No conversations yet</Text>
           ) : (
@@ -283,6 +285,7 @@ export default function GuideScreen() {
               </Pressable>
             ))
           )}
+          </View>
         </View>
       )}
 

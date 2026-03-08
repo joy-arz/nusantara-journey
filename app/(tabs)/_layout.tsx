@@ -14,9 +14,9 @@ function NativeTabLayout() {
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Discover</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="kingdoms">
+      <NativeTabs.Trigger name="map">
         <Icon sf={{ default: "map", selected: "map.fill" }} />
-        <Label>Kingdoms</Label>
+        <Label>Map</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="guide">
         <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
@@ -73,9 +73,9 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="kingdoms"
+        name="map"
         options={{
-          title: "Kingdoms",
+          title: "Map",
           tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} />,
         }}
       />

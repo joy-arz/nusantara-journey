@@ -41,27 +41,30 @@ function KingdomCard({ kingdom }: { kingdom: typeof KINGDOMS[0] }) {
 
   return (
     <AnimatedPressable
-      style={[styles.kingdomCard, animStyle]}
-      onPressIn={() => { scale.value = withSpring(0.96); }}
+      style={[
+        styles.kingdomCard, 
+        animStyle,
+        {
+          backgroundColor: kingdom.color + "22",
+          borderColor: kingdom.color + "60",
+          borderWidth: 1,
+        }
+      ]}
+      onPressIn={() => { scale.value = withSpring(0.97); }}
       onPressOut={() => { scale.value = withSpring(1); }}
-      onPress={() => router.push("/kingdoms")}
+      onPress={() => router.push("/map")}
     >
-      <LinearGradient
-        colors={[kingdom.color + "CC", kingdom.color + "55"]}
-        style={styles.kingdomCardGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.kingdomCardIcon}>
-          <MaterialCommunityIcons name={kingdom.icon as any} size={28} color="#FFF" />
+      <View style={styles.kingdomCardContent}>
+        <View style={[styles.kingdomCardIcon, { backgroundColor: "rgba(255,255,255,0.1)" }]}>
+          <MaterialCommunityIcons name={kingdom.icon as any} size={28} color={kingdom.color} />
         </View>
-        <Text style={styles.kingdomName}>{kingdom.name}</Text>
+        <Text style={[styles.kingdomName, { color: kingdom.color }]}>{kingdom.name}</Text>
         <Text style={styles.kingdomPeriod}>{kingdom.period}</Text>
         <View style={styles.kingdomLocation}>
-          <Ionicons name="location" size={12} color="rgba(255,255,255,0.7)" />
+          <Ionicons name="location" size={12} color={Colors.textMuted} />
           <Text style={styles.kingdomLocationText}>{kingdom.location}</Text>
         </View>
-      </LinearGradient>
+      </View>
     </AnimatedPressable>
   );
 }
@@ -236,20 +239,28 @@ function LocationDiscoverySection() {
       </View>
       
       {kingdom && (
-        <Pressable style={styles.kingdomBanner} onPress={() => router.push("/kingdoms")}>
-          <LinearGradient
-            colors={[kingdom.color, kingdom.color + "AA"]}
-            style={styles.kingdomBannerGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+        <Pressable style={styles.kingdomBanner} onPress={() => router.push("/map")}>
+          <View
+            style={[
+              styles.kingdomBannerContent,
+              { 
+                backgroundColor: Colors.surface,
+                borderWidth: 1,
+                borderColor: kingdom.color + "30",
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: 16,
+                borderRadius: 16,
+              }
+            ]}
           >
-            <View style={styles.kingdomBannerContent}>
-              <Text style={styles.kingdomBannerPeriod}>{kingdom.period}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.kingdomBannerPeriod, { color: kingdom.color }]}>{kingdom.period}</Text>
               <Text style={styles.kingdomBannerName}>{kingdom.name}</Text>
               <Text style={styles.kingdomBannerDesc} numberOfLines={1}>{kingdom.description}</Text>
             </View>
-            <MaterialCommunityIcons name="crown" size={40} color="rgba(255,255,255,0.3)" />
-          </LinearGradient>
+            <MaterialCommunityIcons name="crown" size={40} color={kingdom.color + "40"} />
+          </View>
         </Pressable>
       )}
 
@@ -297,9 +308,8 @@ export default function DiscoverScreen() {
     <View style={[styles.container, { paddingBottom: bottomPadding }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
         style={styles.scroll}
-        contentContainerStyle={{ paddingTop: topPadding, paddingBottom: contentBottomPadding }}
+        contentContainerStyle={{ paddingBottom: contentBottomPadding }}
       >
         {/* Hero Section */}
         <View style={styles.hero}>
@@ -319,7 +329,7 @@ export default function DiscoverScreen() {
               ))}
             </View>
           </View>
-          <View style={styles.heroContent}>
+          <View style={[styles.heroContent, { paddingTop: topPadding + 20 }]}>
             <View style={styles.heroTag}>
               <Text style={styles.heroTagText}>PIDI 2026 · Heritage Tourism</Text>
             </View>
@@ -348,7 +358,7 @@ export default function DiscoverScreen() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           {[
-            { icon: "map", label: "Kingdoms", route: "/kingdoms", color: Colors.terracotta },
+            { icon: "map", label: "Map", route: "/map", color: Colors.terracotta },
             { icon: "chatbubbles", label: "Ask Guide", route: "/guide", color: Colors.accent },
             { icon: "bag", label: "Shop UMKM", route: "/marketplace", color: Colors.forest },
             { icon: "person", label: "My Journey", route: "/profile", color: Colors.jade },
@@ -370,7 +380,7 @@ export default function DiscoverScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Featured Kingdoms</Text>
-            <Pressable onPress={() => router.push("/kingdoms")}>
+            <Pressable onPress={() => router.push("/map")}>
               <Text style={styles.sectionMore}>See all</Text>
             </Pressable>
           </View>
@@ -394,15 +404,18 @@ export default function DiscoverScreen() {
 
         {/* AI Guide Banner */}
         <Pressable
-          style={({ pressed }) => [styles.guideBanner, pressed && { opacity: 0.9 }]}
+          style={({ pressed }) => [
+            styles.guideBanner, 
+            pressed && { transform: [{ scale: 0.97 }] },
+            {
+              backgroundColor: Colors.forestDeep,
+              borderWidth: 1,
+              borderColor: Colors.forest + "80",
+            }
+          ]}
           onPress={() => router.push("/guide")}
         >
-          <LinearGradient
-            colors={[Colors.forestDeep, Colors.forest]}
-            style={styles.guideBannerGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <View style={styles.guideBannerContent}>
             <View style={styles.guideBannerLeft}>
               <Text style={styles.guideBannerTitle}>Meet Arjuna</Text>
               <Text style={styles.guideBannerSubtitle}>Your AI cultural guide to Indonesian heritage, history, and tourism</Text>
@@ -416,7 +429,7 @@ export default function DiscoverScreen() {
                 <Ionicons name="telescope" size={32} color={Colors.accent} />
               </View>
             </View>
-          </LinearGradient>
+          </View>
         </Pressable>
 
         {/* UMKM Highlight */}
@@ -435,7 +448,15 @@ export default function DiscoverScreen() {
             ].map((u, i) => (
               <Pressable
                 key={i}
-                style={({ pressed }) => [styles.umkmCard, pressed && { opacity: 0.8 }]}
+                style={({ pressed }) => [
+                  styles.umkmCard, 
+                  pressed && { transform: [{ scale: 0.97 }] },
+                  {
+                    backgroundColor: Colors.surface,
+                    borderWidth: 1,
+                    borderColor: Colors.gold + "30",
+                  }
+                ]}
                 onPress={() => router.push("/marketplace")}
               >
                 <View style={styles.umkmIconBox}>
@@ -462,6 +483,7 @@ const styles = StyleSheet.create({
     height: 360,
     overflow: "hidden",
     justifyContent: "flex-end",
+    backgroundColor: "#1A0A00",
   },
   batikPattern: {
     ...StyleSheet.absoluteFillObject,
@@ -493,7 +515,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   heroTagText: { color: Colors.primaryLight, fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 1 },
-  heroTitle: { fontSize: 48, fontFamily: "Inter_700Bold", color: Colors.text, lineHeight: 52, marginBottom: 10 },
+  heroTitle: { fontSize: 40, fontFamily: "Inter_700Bold", color: Colors.text, lineHeight: 46, marginBottom: 10 },
   heroSubtitle: { fontSize: 14, color: Colors.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 20, marginBottom: 20 },
   heroStats: { flexDirection: "row", gap: 24 },
   heroStat: { alignItems: "center" },
@@ -517,7 +539,7 @@ const styles = StyleSheet.create({
   sectionMore: { fontSize: 13, color: Colors.primary, fontFamily: "Inter_600SemiBold" },
   horizontalScroll: { paddingHorizontal: 20, gap: 12 },
   kingdomCard: { width: 160, borderRadius: 16, overflow: "hidden" },
-  kingdomCardGradient: { padding: 16, height: 160, justifyContent: "flex-end" },
+  kingdomCardContent: { padding: 16, height: 160, justifyContent: "flex-end" },
   kingdomCardIcon: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.15)",
@@ -530,19 +552,19 @@ const styles = StyleSheet.create({
   kingdomLocationText: { fontSize: 10, color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" },
   creaturesGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, gap: 10 },
   creatureCard: {
-    width: (width - 52) / 2,
+    width: (width - 42) / 2,
     backgroundColor: Colors.surface,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.accent + "30",
   },
   creatureIcon: { marginBottom: 8 },
   creatureName: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 2 },
   creatureType: { fontSize: 11, color: Colors.primary, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
   creatureDesc: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_400Regular", lineHeight: 16 },
   guideBanner: { marginHorizontal: 20, marginTop: 24, borderRadius: 18, overflow: "hidden" },
-  guideBannerGradient: { flexDirection: "row", padding: 20, alignItems: "center" },
+  guideBannerContent: { flexDirection: "row", padding: 20, alignItems: "center" },
   guideBannerLeft: { flex: 1 },
   guideBannerTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 6 },
   guideBannerSubtitle: { fontSize: 13, color: Colors.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 18, marginBottom: 14 },
