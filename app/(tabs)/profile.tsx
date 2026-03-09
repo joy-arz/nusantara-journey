@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Dimensions, Platform, Modal, FlatList
+  Dimensions, Platform, Modal
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Path, G, Text as SvgText } from "react-native-svg";
 import { Colors } from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +15,9 @@ import { INVENTORY_ITEMS, RARITY_COLORS } from "@/constants/inventory-items";
 import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 import { router } from "expo-router";
 import { Image } from "expo-image";
+import { NusantaraMapView as MapView, NusantaraMarker as Marker, NusantaraCircle as Circle } from "@/components/MapWrapper";
+import { KINGDOM_CENTROIDS } from "@/constants/places-data";
+import * as Location from "expo-location";
 
 const { width } = Dimensions.get("window");
 
@@ -87,7 +89,6 @@ function TriviaModal({ visible, onClose }: { visible: boolean; onClose: () => vo
                   const isSelected = selectedOption === option;
                   const isAnswer = option === questions[currentIndex].answer;
                   const showResult = selectedOption !== null;
-                  
                   return (
                     <Pressable
                       key={i}
@@ -124,40 +125,73 @@ function TriviaModal({ visible, onClose }: { visible: boolean; onClose: () => vo
   );
 }
 
-function JourneyMap() {
-  // Simplified Java Map Path
-  const javaPath = "M10,40 L50,35 L100,40 L150,45 L200,40 L250,45 L300,50 L300,70 L250,75 L200,70 L150,75 L100,70 L50,75 L10,70 Z";
-  
-  const regions = [
-    { name: "Sriwijaya", x: 30, y: 30, color: "#D4A843", id: 1 },
-    { name: "Mataram", x: 120, y: 55, color: "#5B8A6E", id: 2 },
-    { name: "Singhasari", x: 220, y: 60, color: "#8B4513", id: 3 },
-    { name: "Majapahit", x: 200, y: 45, color: "#C4622D", id: 4 },
-    { name: "Demak", x: 140, y: 35, color: "#2D5A3D", id: 5 },
-  ];
+function JourneyMapView() {
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [heading, setHeading] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let headingSub: any = null;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({});
+      setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+      headingSub = await Location.watchHeadingAsync((h) => {
+        setHeading(h.trueHeading ?? h.magHeading ?? 0);
+      });
+    })();
+    return () => { if (headingSub) headingSub.remove(); };
+  }, []);
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.journeyMapFallback}>
+        <Ionicons name="map-outline" size={36} color={Colors.textMuted} />
+        <Text style={styles.journeyMapFallbackText}>Open in Expo Go to see live map</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.mapContainer}>
-      <Svg width={width - 40} height={150} viewBox="0 0 320 100">
-        <Path d={javaPath} fill={Colors.bark} stroke={Colors.border} strokeWidth="1" />
-        {regions.map((r) => (
-          <G key={r.id} onPress={() => router.push("/map")}>
-            <Path 
-              d={`M${r.x},${r.y} a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0`} 
-              fill={r.color} 
+    <View style={styles.journeyMapContainer}>
+      <MapView
+        style={StyleSheet.absoluteFill}
+        initialRegion={{ latitude: -4, longitude: 117, latitudeDelta: 18, longitudeDelta: 18 }}
+        userInterfaceStyle="dark"
+        showsUserLocation={false}
+        zoomEnabled
+        scrollEnabled
+        pitchEnabled={false}
+      >
+        {KINGDOM_CENTROIDS.map((k, i) => (
+          <React.Fragment key={i}>
+            <Circle
+              center={{ latitude: k.lat, longitude: k.lng }}
+              radius={100000}
+              strokeColor={k.color}
+              fillColor={k.color + "18"}
             />
-            <SvgText
-              x={r.x}
-              y={r.y - 8}
-              fill={Colors.textMuted}
-              fontSize="8"
-              textAnchor="middle"
-            >
-              {r.name}
-            </SvgText>
-          </G>
+            <Marker coordinate={{ latitude: k.lat, longitude: k.lng }}>
+              <View style={[styles.journeyKingdomMarker, { backgroundColor: k.color }]}>
+                <MaterialCommunityIcons name="crown" size={10} color="#FFF" />
+              </View>
+            </Marker>
+          </React.Fragment>
         ))}
-      </Svg>
+
+        {userLocation && (
+          <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.userLocationContainer}>
+              <View style={styles.userLocationGlow} />
+              <View style={styles.userLocationDot} />
+              <View style={[styles.userLocationArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
+                <Ionicons name="navigate" size={10} color="#FFD700" />
+              </View>
+            </View>
+          </Marker>
+        )}
+      </MapView>
     </View>
   );
 }
@@ -170,7 +204,7 @@ export default function ProfileScreen() {
   const [showSettings, setShowSettings] = useState(false);
 
   const dailyQuests = useMemo(() => getDailyQuests(), []);
-  
+
   const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
   const contentBottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + insets.bottom;
 
@@ -190,13 +224,15 @@ export default function ProfileScreen() {
     addToInventory(quest.itemRewardId);
   };
 
+  const ITEM_SIZE = (width - 40 - 16) / 3;
+
   return (
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: contentBottomPadding }}
       >
-        {/* Header Section */}
+        {/* Header */}
         <View style={[styles.header, { paddingTop: topPadding + 20 }]}>
           <LinearGradient colors={["#1A0A00", Colors.backgroundSecondary]} style={StyleSheet.absoluteFill} />
           <View style={styles.headerTop}>
@@ -235,7 +271,7 @@ export default function ProfileScreen() {
               <Ionicons name="settings-outline" size={22} color={Colors.text} />
             </Pressable>
           </View>
-          
+
           <View style={styles.xpSection}>
             <View style={styles.xpHeader}>
               <Text style={styles.xpLabel}>Experience Points</Text>
@@ -261,7 +297,7 @@ export default function ProfileScreen() {
                   <Text style={[styles.questTitle, isDone && styles.textMuted]}>{quest.title}</Text>
                   <Text style={styles.questReward}>{quest.xpReward} XP + Item</Text>
                 </View>
-                <Pressable 
+                <Pressable
                   style={[styles.questBtn, isDone && styles.questBtnDone]}
                   onPress={() => !isDone && handleClaimQuest(quest)}
                   disabled={isDone}
@@ -276,16 +312,12 @@ export default function ProfileScreen() {
         {/* Cultural Battle */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cultural Battle</Text>
-          <Pressable 
+          <Pressable
             style={({ pressed }) => [
-              styles.battleCard, 
+              styles.battleCard,
               pressed && { transform: [{ scale: 0.97 }] },
-              {
-                backgroundColor: Colors.forestDeep,
-                borderWidth: 1,
-                borderColor: Colors.forest + "80",
-              }
-            ]} 
+              { backgroundColor: Colors.forestDeep, borderWidth: 1, borderColor: Colors.forest + "80" }
+            ]}
             onPress={() => setShowBattle(true)}
           >
             <View style={styles.battleContent}>
@@ -304,22 +336,23 @@ export default function ProfileScreen() {
         {/* Journey Map */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Journey Map</Text>
-          <JourneyMap />
+          <Text style={styles.sectionSubtitle}>Your location among the ancient kingdoms of Nusantara</Text>
+          <JourneyMapView />
         </View>
 
-        {/* Inventory */}
+        {/* My Collection — 3 columns */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My Collection</Text>
           <View style={styles.inventoryGrid}>
             {INVENTORY_ITEMS.map((item) => {
               const owned = inventory.find(i => i.id === item.id);
               return (
-                <View key={item.id} style={[styles.itemCard, !owned && styles.itemLocked]}>
+                <View key={item.id} style={[styles.itemCard, { width: ITEM_SIZE }, !owned && styles.itemLocked]}>
                   <View style={[styles.itemIconContainer, { borderColor: owned ? RARITY_COLORS[item.rarity] : Colors.border }]}>
-                    <MaterialCommunityIcons 
-                      name={item.icon as any} 
-                      size={24} 
-                      color={owned ? RARITY_COLORS[item.rarity] : Colors.textMuted} 
+                    <MaterialCommunityIcons
+                      name={item.icon as any}
+                      size={22}
+                      color={owned ? RARITY_COLORS[item.rarity] : Colors.textMuted}
                     />
                     {owned && owned.count > 1 && (
                       <View style={styles.itemCount}>
@@ -327,7 +360,7 @@ export default function ProfileScreen() {
                       </View>
                     )}
                   </View>
-                  <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
                   <Text style={[styles.itemRarity, { color: owned ? RARITY_COLORS[item.rarity] : Colors.textMuted }]}>{item.rarity}</Text>
                 </View>
               );
@@ -337,7 +370,7 @@ export default function ProfileScreen() {
       </ScrollView>
 
       <TriviaModal visible={showBattle} onClose={() => setShowBattle(false)} />
-      
+
       {/* Settings Modal */}
       <Modal visible={showSettings} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
@@ -387,13 +420,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { padding: 20, paddingBottom: 30 },
   headerTop: { flexDirection: "row", alignItems: "center", gap: 15, marginBottom: 25 },
-  levelBadge: {
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: Colors.primary,
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: Colors.accent,
-  },
-  levelText: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#FFF" },
   headerInfo: { flex: 1 },
   userName: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
   userEmail: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_400Regular", marginBottom: 2 },
@@ -403,29 +429,16 @@ const styles = StyleSheet.create({
   avatar: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: Colors.accent },
   avatarPlaceholder: { backgroundColor: Colors.surface, alignItems: "center", justifyContent: "center" },
   avatarLevelBadge: {
-    position: "absolute",
-    bottom: -5,
-    right: -5,
-    backgroundColor: Colors.primary,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: Colors.accent,
+    position: "absolute", bottom: -5, right: -5,
+    backgroundColor: Colors.primary, width: 24, height: 24, borderRadius: 12,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5, borderColor: Colors.accent,
   },
   avatarLevelText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#FFF" },
   googleLoginBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    gap: 10,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "transparent", borderWidth: 1, borderColor: Colors.border,
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 25, gap: 10,
   },
   googleLoginText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
   settingsBtn: { padding: 8 },
@@ -436,12 +449,12 @@ const styles = StyleSheet.create({
   xpBar: { height: 8, backgroundColor: Colors.surface, borderRadius: 4, overflow: "hidden" },
   xpFill: { height: "100%", borderRadius: 4 },
   section: { paddingHorizontal: 20, marginBottom: 30 },
-  sectionTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 4 },
+  sectionSubtitle: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_400Regular", marginBottom: 14 },
   questCard: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: Colors.surface, borderRadius: 16,
-    padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: Colors.border,
+    padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.border,
   },
   questCardDone: { opacity: 0.6 },
   questIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", marginRight: 15 },
@@ -457,21 +470,48 @@ const styles = StyleSheet.create({
   battleStats: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_500Medium" },
   battleBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, gap: 4 },
   battleBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#FFF" },
-  mapContainer: { backgroundColor: Colors.surface, borderRadius: 16, padding: 10, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
-  inventoryGrid: { flexDirection: "row", flexWrap: "wrap" },
-  itemCard: { width: (width - 40) / 3, alignItems: "center", marginBottom: 15, paddingHorizontal: 5 },
+  journeyMapContainer: {
+    height: 240, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  journeyMapFallback: {
+    height: 160, borderRadius: 16,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  journeyMapFallbackText: { fontSize: 13, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
+  journeyKingdomMarker: {
+    width: 18, height: 18, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#FFF',
+  },
+  userLocationContainer: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  userLocationGlow: {
+    position: 'absolute', width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#FFD700', opacity: 0.25,
+  },
+  userLocationDot: {
+    width: 12, height: 12, borderRadius: 6,
+    backgroundColor: '#FFD700', borderWidth: 2, borderColor: '#FFF',
+  },
+  userLocationArrow: { position: 'absolute', top: 0 },
+  inventoryGrid: {
+    flexDirection: "row", flexWrap: "wrap",
+    gap: 8,
+  },
+  itemCard: { alignItems: "center", marginBottom: 8, paddingHorizontal: 2 },
   itemLocked: { opacity: 0.4 },
-  itemIconContainer: { 
-    width: 60, height: 60, borderRadius: 15, 
-    backgroundColor: Colors.surface, 
+  itemIconContainer: {
+    width: 54, height: 54, borderRadius: 13,
+    backgroundColor: Colors.surface,
     alignItems: "center", justifyContent: "center",
-    borderWidth: 2, marginBottom: 8,
+    borderWidth: 2, marginBottom: 6,
     position: "relative",
   },
-  itemCount: { position: "absolute", top: -5, right: -5, backgroundColor: Colors.primary, width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center" },
-  itemCountText: { fontSize: 10, color: "#FFF", fontFamily: "Inter_700Bold" },
-  itemName: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.text, textAlign: "center" },
-  itemRarity: { fontSize: 9, fontFamily: "Inter_700Bold", marginTop: 2 },
+  itemCount: { position: "absolute", top: -4, right: -4, backgroundColor: Colors.primary, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  itemCountText: { fontSize: 9, color: "#FFF", fontFamily: "Inter_700Bold" },
+  itemName: { fontSize: 9, fontFamily: "Inter_600SemiBold", color: Colors.text, textAlign: "center" },
+  itemRarity: { fontSize: 8, fontFamily: "Inter_700Bold", marginTop: 2 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 20 },
   modalContent: { backgroundColor: Colors.backgroundSecondary, borderRadius: 24, overflow: "hidden", maxHeight: "80%" },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: 1, borderColor: Colors.border },

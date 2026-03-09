@@ -18,6 +18,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "map", selected: "map.fill" }} />
         <Label>Map</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="stories">
+        <Icon sf={{ default: "book", selected: "book.fill" }} />
+        <Label>Stories</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="guide">
         <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
         <Label>Guide</Label>
@@ -77,6 +81,13 @@ function ClassicTabLayout() {
         options={{
           title: "Map",
           tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="stories"
+        options={{
+          title: "Stories",
+          tabBarIcon: ({ color, size }) => <Ionicons name="book" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
