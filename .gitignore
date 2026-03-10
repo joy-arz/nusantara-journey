@@ -33,9 +33,11 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Firebase config (iOS only - Android google-services.json is tracked for EAS Build)
+GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo
 .vercel
-
-.env
