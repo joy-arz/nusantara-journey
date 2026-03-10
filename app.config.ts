@@ -23,8 +23,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const baseConfig = appJson.expo as ExpoConfig;
   const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+  const googleServicesFile =
+    process.env.GOOGLE_SERVICES_JSON ?? baseConfig.android?.googleServicesFile ?? "./google-services.json";
+
   let finalConfig: ExpoConfig = {
     ...baseConfig,
+    android: {
+      ...baseConfig.android,
+      googleServicesFile,
+    },
     updates: {
       enabled: true,
       checkAutomatically: "ON_LOAD",

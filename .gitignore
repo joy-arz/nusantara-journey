@@ -35,8 +35,9 @@ yarn-error.*
 .env*.local
 .env
 
-# Firebase config (iOS only - Android google-services.json is tracked for EAS Build)
+# Firebase config (use EAS Secrets GOOGLE_SERVICES_JSON for builds)
 GoogleService-Info.plist
+google-services.json
 
 # EAS config
 eas.json
