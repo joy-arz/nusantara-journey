@@ -38,6 +38,9 @@ yarn-error.*
 # Firebase config (iOS only - Android google-services.json is tracked for EAS Build)
 GoogleService-Info.plist
 
+# EAS config
+eas.json
+
 # Markdown docs (except README.md)
 *.md
 !README.md
