@@ -45,6 +45,13 @@ eas.json
 *.md
 !README.md
 
+# IDE / local tooling
+.cursor/
+.local/
+
+# tests
+__tests__/
+
 # typescript
 *.tsbuildinfo
 .vercel
