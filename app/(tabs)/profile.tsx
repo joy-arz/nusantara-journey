@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Dimensions, Platform, Modal
@@ -18,6 +18,12 @@ import { Image } from "expo-image";
 import { NusantaraMapView as MapView, NusantaraMarker as Marker, NusantaraCircle as Circle } from "@/components/MapWrapper";
 import { KINGDOM_CENTROIDS } from "@/constants/places-data";
 import * as Location from "expo-location";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import {
+  startBackgroundLocation,
+  stopBackgroundLocation,
+  isBackgroundLocationRunning,
+} from "@/lib/background-location";
 
 const { width } = Dimensions.get("window");
 
@@ -127,7 +133,12 @@ function TriviaModal({ visible, onClose }: { visible: boolean; onClose: () => vo
 
 function JourneyMapView() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [heading, setHeading] = useState(0);
+  const headingRaw = useRef(0);
+  const headingSV = useSharedValue(0);
+
+  const headingStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${headingSV.value}deg` }],
+  }));
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -135,10 +146,15 @@ function JourneyMapView() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
-      const loc = await Location.getCurrentPositionAsync({});
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       headingSub = await Location.watchHeadingAsync((h) => {
-        setHeading(h.trueHeading ?? h.magHeading ?? 0);
+        const raw = h.trueHeading ?? h.magHeading ?? 0;
+        let delta = raw - (headingRaw.current % 360);
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+        headingRaw.current += delta;
+        headingSV.value = withTiming(headingRaw.current, { duration: 200 });
       });
     })();
     return () => { if (headingSub) headingSub.remove(); };
@@ -185,9 +201,9 @@ function JourneyMapView() {
             <View style={styles.userLocationContainer}>
               <View style={styles.userLocationGlow} />
               <View style={styles.userLocationDot} />
-              <View style={[styles.userLocationArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
+              <Animated.View style={[styles.userLocationArrow, headingStyle]}>
                 <Ionicons name="navigate" size={10} color={Colors.gold} />
-              </View>
+              </Animated.View>
             </View>
           </Marker>
         )}
@@ -202,6 +218,11 @@ export default function ProfileScreen() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const [showBattle, setShowBattle] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [bgLocationOn, setBgLocationOn] = useState(false);
+
+  useEffect(() => {
+    isBackgroundLocationRunning().then(setBgLocationOn);
+  }, []);
 
   const dailyQuests = useMemo(() => getDailyQuests(), []);
 
@@ -386,10 +407,30 @@ export default function ProfileScreen() {
                 <Text style={styles.settingText}>Language</Text>
                 <Text style={styles.settingValue}>English</Text>
               </View>
-              <View style={styles.settingItem}>
-                <Text style={styles.settingText}>Notifications</Text>
-                <Ionicons name="toggle" size={32} color={Colors.primary} />
-              </View>
+              <Pressable
+                style={styles.settingItem}
+                onPress={async () => {
+                  if (bgLocationOn) {
+                    await stopBackgroundLocation();
+                    setBgLocationOn(false);
+                  } else {
+                    const ok = await startBackgroundLocation();
+                    setBgLocationOn(ok);
+                  }
+                }}
+              >
+                <View>
+                  <Text style={styles.settingText}>Nearby Alerts</Text>
+                  <Text style={[styles.settingValue, { fontSize: 11 }]}>
+                    Notify when near heritage sites
+                  </Text>
+                </View>
+                <Ionicons
+                  name={bgLocationOn ? "toggle" : "toggle-outline"}
+                  size={32}
+                  color={bgLocationOn ? Colors.primary : Colors.textMuted}
+                />
+              </Pressable>
               <View style={styles.settingDivider} />
               {user && (
                 <Pressable style={styles.settingItem} onPress={signOut} accessibilityLabel="Sign out" accessibilityRole="button">

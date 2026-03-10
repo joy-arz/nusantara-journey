@@ -60,7 +60,7 @@ export function useNearbyPlaces() {
         }
 
         const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
         });
 
         const { latitude, longitude } = location.coords;

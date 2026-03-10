@@ -295,19 +295,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations/:id/messages", async (req: Request, res: Response) => {
     try {
       const conversationId = parseInt(req.params.id as string);
-      const { content } = req.body;
+      const { content, imageData } = req.body;
 
-      await db.insert(messages).values({ conversationId, role: "user", content });
+      await db.insert(messages).values({
+        conversationId,
+        role: "user",
+        content: content || (imageData ? "[Image]" : ""),
+        imageUrl: imageData || null,
+      });
 
       const allMsgs = await db.select().from(messages).where(eq(messages.conversationId, conversationId)).orderBy(messages.createdAt);
-      const chatMsgs = allMsgs.map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+      const chatMsgs: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = allMsgs.map(m => {
+        if (m.role === "user" && m.imageUrl) {
+          const parts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [];
+          if (m.content && m.content !== "[Image]") {
+            parts.push({ type: "text", text: m.content });
+          } else {
+            parts.push({ type: "text", text: "What can you tell me about this image? Relate it to Indonesian culture, heritage, or history if possible." });
+          }
+          parts.push({ type: "image_url", image_url: { url: m.imageUrl, detail: "low" } });
+          return { role: "user" as const, content: parts };
+        }
+        return { role: m.role as "user" | "assistant", content: m.content };
+      });
 
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-5.1",
+        model: "gpt-4o",
         messages: [{ role: "system", content: NUSANTARA_SYSTEM_PROMPT }, ...chatMsgs],
         stream: true,
         max_completion_tokens: 1024,
@@ -328,6 +346,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (e) {
       if (res.headersSent) { res.write(`data: ${JSON.stringify({ error: "Failed" })}\n\n`); res.end(); }
       else res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  app.post("/api/transcribe", async (req: Request, res: Response) => {
+    try {
+      const { audioData } = req.body;
+      if (!audioData) {
+        return res.status(400).json({ error: "Missing audioData (base64)" });
+      }
+
+      const buffer = Buffer.from(audioData, "base64");
+      const file = new File([buffer], "recording.m4a", { type: "audio/m4a" });
+
+      const transcription = await openai.audio.transcriptions.create({
+        model: "whisper-1",
+        file,
+        language: "en",
+      });
+
+      res.json({ text: transcription.text });
+    } catch (e) {
+      console.error("Transcription error:", e);
+      res.status(500).json({ error: "Failed to transcribe audio" });
     }
   });
 

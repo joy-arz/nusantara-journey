@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
@@ -324,8 +324,13 @@ export default function MapScreen() {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [detailPlace, setDetailPlace] = useState<Place | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [heading, setHeading] = useState(0);
+  const headingRaw = useRef(0);
+  const headingSV = useSharedValue(0);
   const { gainXP } = useGame();
+
+  const headingStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${headingSV.value}deg` }],
+  }));
 
   const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
   const bottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + insets.bottom;
@@ -336,10 +341,15 @@ export default function MapScreen() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
-      const loc = await Location.getCurrentPositionAsync({});
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       headingSub = await Location.watchHeadingAsync((h) => {
-        setHeading(h.trueHeading ?? h.magHeading ?? 0);
+        const raw = h.trueHeading ?? h.magHeading ?? 0;
+        let delta = raw - (headingRaw.current % 360);
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+        headingRaw.current += delta;
+        headingSV.value = withTiming(headingRaw.current, { duration: 200 });
       });
     })();
     return () => { if (headingSub) headingSub.remove(); };
@@ -442,9 +452,9 @@ export default function MapScreen() {
             <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
               <View style={styles.userLocationContainer}>
                 <View style={styles.userLocationGlow} />
-                <View style={[styles.userLocationArrowRing, { transform: [{ rotate: `${heading}deg` }] }]}>
+                <Animated.View style={[styles.userLocationArrowRing, headingStyle]}>
                   <View style={styles.userLocationArrowHead} />
-                </View>
+                </Animated.View>
                 <View style={styles.userLocationDot} />
               </View>
             </Marker>

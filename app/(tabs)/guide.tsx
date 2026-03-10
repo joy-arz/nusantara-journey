@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable,
-  TextInput, Platform, KeyboardAvoidingView
+  TextInput, Platform, KeyboardAvoidingView, Image, Alert
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +13,8 @@ import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetch } from "expo/fetch";
 import { useGame } from "@/context/GameContext";
+import * as ImagePicker from "expo-image-picker";
+import { Audio } from "expo-av";
 
 import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 
@@ -27,6 +29,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   conversationId: number;
+  imageUrl?: string | null;
 }
 
 const SUGGESTIONS = [
@@ -87,9 +90,18 @@ function MessageBubble({ message }: { message: Message }) {
         </View>
       )}
       <View style={[bubbleStyles.bubble, isUser ? bubbleStyles.bubbleUser : bubbleStyles.bubbleAssistant]}>
-        <Text style={[bubbleStyles.text, isUser ? bubbleStyles.textUser : bubbleStyles.textAssistant]}>
-          {message.content}
-        </Text>
+        {message.imageUrl && (
+          <Image
+            source={{ uri: message.imageUrl }}
+            style={bubbleStyles.image}
+            resizeMode="cover"
+          />
+        )}
+        {message.content && message.content !== "[Image]" && (
+          <Text style={[bubbleStyles.text, isUser ? bubbleStyles.textUser : bubbleStyles.textAssistant]}>
+            {message.content}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -106,7 +118,8 @@ const bubbleStyles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     flexShrink: 0,
   },
-  bubble: { maxWidth: "78%", borderRadius: 18, padding: 12 },
+  bubble: { maxWidth: "78%", borderRadius: 18, padding: 12, overflow: "hidden" },
+  image: { width: 200, height: 200, borderRadius: 12, marginBottom: 6 },
   bubbleUser: {
     backgroundColor: Colors.primary,
     borderBottomRightRadius: 4,
@@ -133,6 +146,10 @@ export default function GuideScreen() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
   const listRef = useRef<FlatList>(null);
   const { gainXP } = useGame();
 
@@ -168,22 +185,141 @@ export default function GuideScreen() {
     }
   };
 
+  const pickImage = async (useCamera: boolean) => {
+    try {
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ["images"],
+        quality: 0.7,
+        base64: true,
+        allowsEditing: true,
+        aspect: [1, 1],
+      };
+
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          const mimeType = asset.mimeType || "image/jpeg";
+          setPendingImage(`data:${mimeType};base64,${asset.base64}`);
+        }
+      }
+    } catch (e) {
+      console.error("Image picker error:", e);
+      Alert.alert("Error", "Could not access images. Check permissions in Settings.");
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Microphone access is required for voice input.");
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch (e) {
+      console.error("Failed to start recording:", e);
+      Alert.alert("Error", "Could not start recording.");
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recordingRef.current) return;
+
+    setIsRecording(false);
+    setIsTranscribing(true);
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      if (!uri) throw new Error("No recording URI");
+
+      const response = await globalThis.fetch(uri);
+      const blob = await response.blob();
+      const reader = new FileReader();
+
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(",")[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const baseUrl = getApiUrl();
+      const transcribeUrl = new URL("/api/transcribe", baseUrl);
+      const res = await globalThis.fetch(transcribeUrl.toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audioData: base64 }),
+      });
+
+      if (!res.ok) throw new Error("Transcription failed");
+      const data = await res.json();
+      if (data.text) {
+        setInput(prev => (prev ? prev + " " : "") + data.text);
+      }
+    } catch (e) {
+      console.error("Transcription error:", e);
+      Alert.alert("Error", "Could not transcribe audio. Please try again.");
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   const sendMessage = async () => {
-    if (!input.trim() || isStreaming) return;
+    const hasText = input.trim().length > 0;
+    const hasImage = !!pendingImage;
+    if ((!hasText && !hasImage) || isStreaming) return;
     setSendError(null);
     const text = input.trim();
+    const imageData = pendingImage;
     setInput("");
+    setPendingImage(null);
 
     let convId = activeConvId;
-    if (!convId) {
-      const res = await apiRequest("POST", "/api/conversations", { title: text.slice(0, 40) });
-      const conv = await res.json();
-      convId = conv.id;
-      setActiveConvId(convId);
-      qc.invalidateQueries({ queryKey: ["/api/conversations"] });
+
+    try {
+      if (!convId) {
+        const title = text ? text.slice(0, 40) : "Image conversation";
+        const res = await apiRequest("POST", "/api/conversations", { title });
+        const conv = await res.json();
+        convId = conv.id;
+        setActiveConvId(convId);
+        qc.invalidateQueries({ queryKey: ["/api/conversations"] });
+      }
+    } catch (e) {
+      console.error(e);
+      setSendError("Could not connect to server. Please try again.");
+      return;
     }
 
-    const userMsg: Message = { id: Date.now(), role: "user", content: text, conversationId: convId! };
+    const userMsg: Message = {
+      id: Date.now(),
+      role: "user",
+      content: text || "[Image]",
+      conversationId: convId!,
+      imageUrl: imageData,
+    };
     setMessages(prev => [...prev, userMsg]);
     gainXP(15, "guide_chat");
 
@@ -197,7 +333,7 @@ export default function GuideScreen() {
       const response = await fetch(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
+        body: JSON.stringify({ content: text, imageData }),
       });
 
       const reader = response.body?.getReader();
@@ -351,12 +487,56 @@ export default function GuideScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <View style={[styles.inputBar, { paddingBottom: bottomPadding }]}>
+          {pendingImage && (
+            <View style={styles.imagePreviewRow}>
+              <Image source={{ uri: pendingImage }} style={styles.imagePreview} />
+              <Pressable style={styles.imageRemoveBtn} onPress={() => setPendingImage(null)}>
+                <Ionicons name="close-circle" size={22} color={Colors.error} />
+              </Pressable>
+            </View>
+          )}
+          {isTranscribing && (
+            <View style={styles.transcribingRow}>
+              <Ionicons name="hourglass" size={14} color={Colors.accent} />
+              <Text style={styles.transcribingText}>Transcribing voice...</Text>
+            </View>
+          )}
           <View style={styles.inputWrap}>
+            <View style={styles.mediaButtons}>
+              <Pressable
+                onPress={() => pickImage(true)}
+                disabled={isStreaming}
+                style={styles.mediaBtn}
+                accessibilityLabel="Take photo"
+              >
+                <Ionicons name="camera" size={20} color={isStreaming ? Colors.border : Colors.textMuted} />
+              </Pressable>
+              <Pressable
+                onPress={() => pickImage(false)}
+                disabled={isStreaming}
+                style={styles.mediaBtn}
+                accessibilityLabel="Pick image from gallery"
+              >
+                <Ionicons name="image" size={20} color={isStreaming ? Colors.border : Colors.textMuted} />
+              </Pressable>
+              <Pressable
+                onPress={isRecording ? stopRecording : startRecording}
+                disabled={isStreaming || isTranscribing}
+                style={[styles.mediaBtn, isRecording && styles.mediaBtnActive]}
+                accessibilityLabel={isRecording ? "Stop recording" : "Start voice input"}
+              >
+                <Ionicons
+                  name={isRecording ? "stop" : "mic"}
+                  size={20}
+                  color={isRecording ? Colors.error : (isStreaming || isTranscribing) ? Colors.border : Colors.textMuted}
+                />
+              </Pressable>
+            </View>
             <TextInput
               style={styles.input}
               value={input}
               onChangeText={setInput}
-              placeholder="Ask about Indonesian heritage..."
+              placeholder={isRecording ? "Recording..." : "Ask about Indonesian heritage..."}
               placeholderTextColor={Colors.textMuted}
               multiline
               maxLength={500}
@@ -365,9 +545,9 @@ export default function GuideScreen() {
               blurOnSubmit={false}
             />
             <Pressable
-              style={[styles.sendBtn, (!input.trim() || isStreaming) && styles.sendBtnDisabled]}
+              style={[styles.sendBtn, (!input.trim() && !pendingImage || isStreaming) && styles.sendBtnDisabled]}
               onPress={sendMessage}
-              disabled={!input.trim() || isStreaming}
+              disabled={(!input.trim() && !pendingImage) || isStreaming}
               accessibilityLabel="Send message"
               accessibilityRole="button"
             >
@@ -408,12 +588,36 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundSecondary,
     borderTopWidth: 1, borderColor: Colors.border,
   },
+  imagePreviewRow: {
+    flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 8,
+  },
+  imagePreview: {
+    width: 64, height: 64, borderRadius: 10,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  imageRemoveBtn: { padding: 2 },
+  transcribingRow: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6,
+  },
+  transcribingText: {
+    fontSize: 12, color: Colors.accent, fontFamily: "Inter_400Regular",
+  },
+  mediaButtons: {
+    flexDirection: "row", alignItems: "center", gap: 2,
+  },
+  mediaBtn: {
+    width: 32, height: 32, alignItems: "center", justifyContent: "center",
+    borderRadius: 16,
+  },
+  mediaBtnActive: {
+    backgroundColor: Colors.error + "20",
+  },
   inputWrap: {
     flexDirection: "row", alignItems: "flex-end",
     backgroundColor: Colors.surface,
     borderRadius: 22, borderWidth: 1, borderColor: Colors.border,
-    paddingLeft: 16, paddingRight: 6, paddingVertical: 6,
-    gap: 8,
+    paddingLeft: 4, paddingRight: 6, paddingVertical: 6,
+    gap: 4,
   },
   input: {
     flex: 1, fontSize: 14, color: Colors.text,
