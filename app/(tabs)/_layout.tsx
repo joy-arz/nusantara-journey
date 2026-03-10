@@ -73,6 +73,7 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Discover",
+          tabBarAccessibilityLabel: "Discover",
           tabBarIcon: ({ color, size }) => <Ionicons name="compass" size={size} color={color} />,
         }}
       />
@@ -80,6 +81,7 @@ function ClassicTabLayout() {
         name="map"
         options={{
           title: "Map",
+          tabBarAccessibilityLabel: "Map",
           tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} />,
         }}
       />
@@ -87,6 +89,7 @@ function ClassicTabLayout() {
         name="stories"
         options={{
           title: "Stories",
+          tabBarAccessibilityLabel: "Stories",
           tabBarIcon: ({ color, size }) => <Ionicons name="book" size={size} color={color} />,
         }}
       />
@@ -94,6 +97,7 @@ function ClassicTabLayout() {
         name="guide"
         options={{
           title: "Guide",
+          tabBarAccessibilityLabel: "Guide",
           tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses" size={size} color={color} />,
         }}
       />
@@ -101,6 +105,7 @@ function ClassicTabLayout() {
         name="marketplace"
         options={{
           title: "Shop",
+          tabBarAccessibilityLabel: "Shop",
           tabBarIcon: ({ color, size }) => <Ionicons name="bag" size={size} color={color} />,
         }}
       />
@@ -108,6 +113,7 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: "Profile",
+          tabBarAccessibilityLabel: "Profile",
           tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
         }}
       />

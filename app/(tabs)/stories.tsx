@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Dimensions, Platform, Modal, FlatList
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
@@ -13,6 +14,15 @@ import {
   FOLKLORE_STORIES, FolkloreStory, CATEGORY_LABELS, CATEGORY_COLORS, STORY_REGIONS, StoryCategory
 } from "@/constants/folklore-stories";
 
+const CATEGORY_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
+  'All': 'book-open-variant',
+  'legend': 'crown',
+  'fable': 'turtle',
+  'myth': 'star-crescent',
+  'fairy-tale': 'magic-staff',
+  'origin-story': 'earth',
+};
+
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
 
@@ -20,7 +30,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const REGION_KEYWORDS: Record<string, string[]> = {
   'Java': ['java', 'yogyakarta', 'surakarta', 'solo', 'javanese', 'sunda', 'betawi', 'jakarta', 'ponorogo', 'kediri', 'malang', 'surabaya', 'banyumas', 'batavia', 'mataram'],
-  'Sumatra': ['sumatra', 'sumatra', 'minangkabau', 'aceh', 'palembang', 'jambi', 'riau', 'bangka', 'belitung', 'batak', 'padang', 'medan', 'lampung'],
+  'Sumatra': ['sumatra', 'minangkabau', 'aceh', 'palembang', 'jambi', 'riau', 'bangka', 'belitung', 'batak', 'padang', 'medan', 'lampung'],
   'Bali': ['bali', 'balinese', 'ubud', 'denpasar'],
   'Kalimantan': ['kalimantan', 'borneo', 'dayak', 'kutai', 'banjar', 'mahakam', 'kapuas'],
   'Sulawesi': ['sulawesi', 'bugis', 'makassar', 'minahasa', 'tomohon', 'toraja', 'gorontalo'],
@@ -49,18 +59,23 @@ function StoryCard({ story, onPress }: { story: FolkloreStory; onPress: () => vo
       onPressOut={() => { scale.value = withSpring(1); }}
       onPress={onPress}
     >
-      <View style={[styles.storyCardIllustration, { backgroundColor: catColor + "25" }]}>
-        <MaterialCommunityIcons
-          name={
-            story.category === 'myth' ? 'star-crescent' :
-            story.category === 'legend' ? 'crown' :
-            story.category === 'fairy-tale' ? 'magic-staff' :
-            story.category === 'origin-story' ? 'earth' :
-            'owl'
-          }
-          size={36}
-          color={catColor}
-        />
+      <View style={styles.storyCardIllustration}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: catColor + "25", alignItems: "center", justifyContent: "center" }]}>
+          <MaterialCommunityIcons
+            name={
+              story.category === 'myth' ? 'star-crescent' :
+              story.category === 'legend' ? 'crown' :
+              story.category === 'fairy-tale' ? 'magic-staff' :
+              story.category === 'origin-story' ? 'earth' :
+              'owl'
+            }
+            size={36}
+            color={catColor}
+          />
+        </View>
+        {story.imageUrl && (
+          <Image source={{ uri: story.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        )}
       </View>
       <View style={styles.storyCardBody}>
         <View style={[styles.storyCardBadge, { backgroundColor: catColor + "22" }]}>
@@ -90,17 +105,22 @@ function StoryDetailModal({ story, onClose }: { story: FolkloreStory; onClose: (
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
             {/* Header illustration */}
-            <View style={[styles.modalIllustration, { backgroundColor: catColor + "20" }]}>
-              <MaterialCommunityIcons
-                name={
-                  story.category === 'myth' ? 'star-crescent' :
-                  story.category === 'legend' ? 'crown' :
-                  story.category === 'fairy-tale' ? 'magic-staff' :
-                  story.category === 'origin-story' ? 'earth' : 'owl'
-                }
-                size={56}
-                color={catColor}
-              />
+            <View style={styles.modalIllustration}>
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: catColor + "20", alignItems: "center", justifyContent: "center" }]}>
+                <MaterialCommunityIcons
+                  name={
+                    story.category === 'myth' ? 'star-crescent' :
+                    story.category === 'legend' ? 'crown' :
+                    story.category === 'fairy-tale' ? 'magic-staff' :
+                    story.category === 'origin-story' ? 'earth' : 'owl'
+                  }
+                  size={56}
+                  color={catColor}
+                />
+              </View>
+              {story.imageUrl && (
+                <Image source={{ uri: story.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              )}
             </View>
 
             <View style={styles.modalBody}>
@@ -156,7 +176,7 @@ function StoryDetailModal({ story, onClose }: { story: FolkloreStory; onClose: (
                   router.push({ pathname: "/guide", params: { initialMessage: `Tell me more about the Indonesian folklore story "${story.titleId}" (${story.title}). What are the deeper cultural meanings?` } });
                 }}
               >
-                <Ionicons name="chatbubble-ellipses" size={16} color="#FFF" />
+                <Ionicons name="chatbubble-ellipses" size={16} color={Colors.text} />
                 <Text style={styles.askArjunaBtnText}>Ask Arjuna about this story</Text>
               </Pressable>
             </View>
@@ -176,7 +196,7 @@ export default function StoriesScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedRegion, setSelectedRegion] = useState<string>('All Regions');
   const [selectedStory, setSelectedStory] = useState<FolkloreStory | null>(null);
-  const [search, setSearch] = useState('');
+
 
   const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
   const bottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + insets.bottom;
@@ -209,43 +229,62 @@ export default function StoriesScreen() {
         contentContainerStyle={styles.filterRow}
         style={styles.filterScroll}
       >
-        {categories.map(cat => (
-          <Pressable
-            key={cat}
-            style={[
-              styles.filterPill,
-              selectedCategory === cat && { backgroundColor: catColor(cat), borderColor: catColor(cat) }
-            ]}
-            onPress={() => setSelectedCategory(cat)}
-          >
-            <Text style={[styles.filterText, selectedCategory === cat && styles.filterTextActive]}>
-              {categoryLabel(cat)}
-            </Text>
-          </Pressable>
-        ))}
+        {categories.map(cat => {
+          const isActive = selectedCategory === cat;
+          const color = catColor(cat);
+          const iconName = CATEGORY_ICONS[cat] ?? 'book-open-variant';
+          return (
+            <Pressable
+              key={cat}
+              style={[
+                styles.filterPill,
+                isActive && { backgroundColor: color, borderColor: color }
+              ]}
+              onPress={() => setSelectedCategory(cat)}
+            >
+              <MaterialCommunityIcons
+                name={iconName}
+                size={14}
+                color={isActive ? '#FFFFFF' : Colors.textSecondary}
+              />
+              <Text style={[
+                styles.filterText,
+                isActive && { color: '#FFFFFF' }
+              ]}>
+                {categoryLabel(cat)}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
       {/* Region Filter */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
+        contentContainerStyle={styles.regionRow}
         style={styles.filterScrollSmall}
       >
-        {STORY_REGIONS.map(region => (
-          <Pressable
-            key={region}
-            style={[
-              styles.regionPill,
-              selectedRegion === region && { backgroundColor: Colors.accent + "22", borderColor: Colors.accent }
-            ]}
-            onPress={() => setSelectedRegion(region)}
-          >
-            <Text style={[styles.regionText, selectedRegion === region && { color: Colors.accent }]}>
-              {region}
-            </Text>
-          </Pressable>
-        ))}
+        {STORY_REGIONS.map(region => {
+          const isActive = selectedRegion === region;
+          return (
+            <Pressable
+              key={region}
+              style={[
+                styles.regionPill,
+                isActive && { backgroundColor: Colors.accent, borderColor: Colors.accent }
+              ]}
+              onPress={() => setSelectedRegion(region)}
+            >
+              <Text style={[
+                styles.regionText,
+                isActive && { color: '#FFFFFF' }
+              ]}>
+                {region}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
       {/* Count */}
@@ -255,6 +294,7 @@ export default function StoriesScreen() {
 
       {/* Stories Grid */}
       <FlatList
+        key={`${selectedCategory}-${selectedRegion}`}
         data={filteredStories}
         keyExtractor={item => item.id}
         numColumns={2}
@@ -289,24 +329,31 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 26, fontFamily: "Inter_700Bold", color: Colors.text },
   headerSubtitle: { fontSize: 12, color: Colors.accent, fontFamily: "Inter_500Medium", marginTop: 2 },
-  filterScroll: { borderBottomWidth: 0 },
-  filterScrollSmall: { borderBottomWidth: 0, marginTop: 4 },
-  filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  filterScroll: { flexGrow: 0 },
+  filterScrollSmall: { flexGrow: 0, marginTop: 2 },
+  filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 10, alignItems: 'center' },
   filterPill: {
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: Colors.barkLight,
+    backgroundColor: Colors.bark,
   },
-  filterText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary },
-  filterTextActive: { color: "#FFF" },
+  filterText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary },
+  regionRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8, alignItems: 'center' },
   regionPill: {
-    paddingHorizontal: 12, paddingVertical: 5,
-    borderRadius: 14, borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.barkLight,
+    backgroundColor: Colors.bark,
   },
-  regionText: { fontSize: 11, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  regionText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
   countRow: { paddingHorizontal: 20, paddingBottom: 8 },
   countText: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
   columnWrapper: { paddingHorizontal: 12, gap: 12 },
@@ -324,6 +371,7 @@ const styles = StyleSheet.create({
     height: 100,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   storyCardBody: { padding: 12 },
   storyCardBadge: {
@@ -337,7 +385,7 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 14 },
   emptyText: { color: Colors.textMuted, fontFamily: "Inter_500Medium", fontSize: 15 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: Colors.overlay, justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: Colors.backgroundSecondary,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
@@ -351,6 +399,7 @@ const styles = StyleSheet.create({
   modalScroll: { flex: 1 },
   modalIllustration: {
     height: 140, alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
   modalBody: { padding: 20 },
   modalBadgeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 12 },
@@ -402,7 +451,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 14, borderRadius: 14, marginBottom: 10,
   },
-  askArjunaBtnText: { color: '#FFF', fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  askArjunaBtnText: { color: Colors.text, fontSize: 15, fontFamily: "Inter_600SemiBold" },
   closeBtn: {
     position: 'absolute', top: 14, right: 16,
     backgroundColor: Colors.surface + 'CC',

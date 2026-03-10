@@ -42,15 +42,15 @@ const CREATURES = [
     type: "Divine Eagle",
     desc: "The sacred mount of Vishnu, national symbol of Indonesia. A colossal eagle-man deity representing loyalty, courage, and the solar principle.",
     kingdom: "All of Nusantara",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Gatotkaca_Wayang.jpg/480px-Gatotkaca_Wayang.jpg",
+    imageUrl: "https://images.unsplash.com/photo-1760355714419-ced046db2c99?w=640&q=80",
     icon: "bird",
   },
   {
     name: "Nyai Roro Kidul",
     type: "Sea Queen",
-    desc: "The mystical queen of the Southern Sea. Said to be the spiritual consort of every Sultan of Yogyakarta, commanding the storms and waves of the Indian Ocean.",
+    desc: "The mystical queen of the Southern Sea, often associated with the color green. Said to be the spiritual consort of every Sultan of Yogyakarta, commanding the storms and waves of the Indian Ocean.",
     kingdom: "Mataram Islam",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Nyai_Roro_Kidul_painting.jpg/480px-Nyai_Roro_Kidul_painting.jpg",
+    imageUrl: "https://images.unsplash.com/photo-1601058497548-f247dfe349d6?w=640&q=80",
     icon: "waves",
   },
   {
@@ -58,15 +58,15 @@ const CREATURES = [
     type: "Lion Spirit",
     desc: "The protector deity of Bali, a lion-like spirit who battles the witch Rangda in the eternal struggle between good and evil.",
     kingdom: "Bali",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Barong_Ket.jpg/480px-Barong_Ket.jpg",
+    imageUrl: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=640&q=80",
     icon: "shield-star",
   },
   {
     name: "Kuntilanak",
-    type: "Forest Spirit",
+    type: "Spirit of Childbirth",
     desc: "A wandering spirit of Indonesian folklore — the ghost of a woman who died during childbirth, said to inhabit old trees and appear at crossroads at dusk.",
     kingdom: "Java & Sumatra",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Hantu_Kuntilanak.jpg/480px-Hantu_Kuntilanak.jpg",
+    imageUrl: "https://images.unsplash.com/photo-1707371773021-d39017b761f0?w=640&q=80",
     icon: "ghost",
   },
 ];
@@ -74,7 +74,7 @@ const CREATURES = [
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function PlaceDetailModal({ place, onClose }: { place: Place; onClose: () => void }) {
-  const typeColor = place.type === 'museum' ? '#4A90D9' : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? '#E07840' : Colors.primary;
+  const typeColor = place.type === 'museum' ? Colors.jade : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? Colors.primaryLight : Colors.primary;
   const typeLabel = place.type === 'museum' ? 'Museum' : place.type === 'umkm' ? 'UMKM Artisan' : place.type === 'food' ? 'Traditional Food' : 'Heritage Site';
   const typeIcon: any = place.type === 'museum' ? 'library' : place.type === 'umkm' ? 'hammer' : place.type === 'food' ? 'restaurant' : 'trail-sign';
 
@@ -152,7 +152,7 @@ function PlaceDetailModal({ place, onClose }: { place: Place; onClose: () => voi
                   router.push({ pathname: "/guide", params: { initialMessage: `Tell me about ${place.name} and its cultural significance in Indonesia` } });
                 }}
               >
-                <Ionicons name="chatbubble-ellipses" size={16} color="#FFF" />
+                <Ionicons name="chatbubble-ellipses" size={16} color={Colors.text} />
                 <Text style={styles.modalAskBtnText}>Ask Arjuna about this place</Text>
               </Pressable>
             </View>
@@ -173,7 +173,13 @@ function CreatureModal({ creature, onClose }: { creature: typeof CREATURES[0]; o
         <View style={styles.modalSheet}>
           <View style={styles.modalHandle} />
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Image source={{ uri: creature.imageUrl }} style={styles.modalImage} contentFit="cover" />
+            {creature.imageUrl ? (
+              <Image source={{ uri: creature.imageUrl }} style={styles.modalImage} contentFit="cover" />
+            ) : (
+              <View style={[styles.modalImage, styles.modalImageFallback, { backgroundColor: Colors.bark }]}>
+                <MaterialCommunityIcons name={creature.icon as any} size={48} color={Colors.accent + "80"} />
+              </View>
+            )}
             <View style={styles.modalBody}>
               <View style={[styles.modalTypeBadge, { backgroundColor: Colors.accent + "22" }]}>
                 <Text style={[styles.modalTypeText, { color: Colors.accent }]}>{creature.type}</Text>
@@ -191,7 +197,7 @@ function CreatureModal({ creature, onClose }: { creature: typeof CREATURES[0]; o
                   router.push({ pathname: "/guide", params: { initialMessage: `Tell me everything about ${creature.name} in Indonesian mythology and folklore` } });
                 }}
               >
-                <Ionicons name="chatbubble-ellipses" size={16} color="#FFF" />
+                <Ionicons name="chatbubble-ellipses" size={16} color={Colors.text} />
                 <Text style={styles.modalAskBtnText}>Learn more from Arjuna</Text>
               </Pressable>
             </View>
@@ -242,9 +248,14 @@ function CreatureCard({ creature, onPress }: { creature: typeof CREATURES[0]; on
       onPressOut={() => { scale.value = withSpring(1); }}
       onPress={onPress}
     >
-      <Image source={{ uri: creature.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.bark, alignItems: "center", justifyContent: "center" }]}>
+        <MaterialCommunityIcons name={creature.icon as any} size={48} color={Colors.accent + "80"} />
+      </View>
+      {creature.imageUrl && (
+        <Image source={{ uri: creature.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      )}
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.75)']}
+        colors={['transparent', Colors.overlay]}
         style={[StyleSheet.absoluteFill, { borderRadius: 14 }]}
       />
       <View style={styles.creatureOverlay}>
@@ -278,8 +289,9 @@ function PlaceCard({ place, userCoords, onPress }: {
     return (R * c).toFixed(1);
   }, [place, userCoords]);
 
-  const typeColor = place.type === 'museum' ? '#4A90D9' : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? '#E07840' : Colors.primary;
+  const typeColor = place.type === 'museum' ? Colors.jade : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? Colors.primaryLight : Colors.primary;
   const typeLabel = place.type === 'museum' ? 'MUSEUM' : place.type === 'umkm' ? 'UMKM' : place.type === 'food' ? 'FOOD' : 'HERITAGE';
+  const typeIcon: any = place.type === 'museum' ? 'library' : place.type === 'umkm' ? 'hammer' : place.type === 'food' ? 'restaurant' : 'trail-sign';
 
   return (
     <AnimatedPressable
@@ -288,15 +300,14 @@ function PlaceCard({ place, userCoords, onPress }: {
       onPressOut={() => { scale.value = withSpring(1); }}
       onPress={onPress}
     >
-      {place.imageUrl ? (
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: typeColor + "25", alignItems: 'center', justifyContent: 'center' }]}>
+        <Ionicons name={typeIcon} size={28} color={typeColor} />
+      </View>
+      {place.imageUrl && (
         <Image source={{ uri: place.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: typeColor + "25", alignItems: 'center', justifyContent: 'center' }]}>
-          <Ionicons name={place.type === 'museum' ? 'library' : place.type === 'umkm' ? 'hammer' : place.type === 'food' ? 'restaurant' : 'trail-sign'} size={28} color={typeColor} />
-        </View>
       )}
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.72)']}
+        colors={['transparent', Colors.overlay]}
         style={[StyleSheet.absoluteFill, { borderRadius: 14 }]}
       />
       <View style={[styles.placeTypeBadge, { backgroundColor: typeColor }]}>
@@ -306,7 +317,7 @@ function PlaceCard({ place, userCoords, onPress }: {
         <Text style={styles.placeNameOverlay} numberOfLines={1}>{place.name}</Text>
         {distance && (
           <View style={styles.distanceBadge}>
-            <Ionicons name="navigate" size={9} color="#FFF" />
+            <Ionicons name="navigate" size={9} color={Colors.text} />
             <Text style={styles.distanceText}>{distance} km</Text>
           </View>
         )}
@@ -326,12 +337,11 @@ function FoodCard({ place, onPress }: { place: Place; onPress: () => void }) {
       onPressOut={() => { scale.value = withSpring(1); }}
       onPress={onPress}
     >
-      {place.imageUrl ? (
-        <Image source={{ uri: place.imageUrl }} style={styles.foodCardImage} contentFit="cover" />
-      ) : (
-        <View style={[styles.foodCardImage, { backgroundColor: '#E07840' + "25", alignItems: 'center', justifyContent: 'center' }]}>
-          <Ionicons name="restaurant" size={28} color="#E07840" />
-        </View>
+      <View style={[styles.foodCardImage, { backgroundColor: Colors.primaryLight + "25", alignItems: 'center', justifyContent: 'center' }]}>
+        <Ionicons name="restaurant" size={28} color={Colors.primaryLight} />
+      </View>
+      {place.imageUrl && (
+        <Image source={{ uri: place.imageUrl }} style={[styles.foodCardImage, { position: 'absolute', top: 0, left: 0, right: 0 }]} contentFit="cover" />
       )}
       <View style={styles.foodCardBody}>
         <Text style={styles.foodCardName} numberOfLines={1}>{place.name}</Text>
@@ -491,7 +501,7 @@ export default function DiscoverScreen() {
       >
         {/* Hero Section */}
         <View style={styles.hero}>
-          <LinearGradient colors={["#1A0A00", Colors.bark, "#2D1A0A"]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={[Colors.background, Colors.bark, Colors.barkLight]} style={StyleSheet.absoluteFill} />
           <View style={styles.batikPattern}>
             <View style={styles.batikDiamondRow}>
               {[...Array(3)].map((_, i) => <View key={i} style={styles.batikDiamond} />)}
@@ -612,7 +622,7 @@ export default function DiscoverScreen() {
           ]}
           onPress={() => router.push("/stories")}
         >
-          <LinearGradient colors={["#2D1A0A", "#4A1E0A"]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={[Colors.bark, Colors.barkLight]} style={StyleSheet.absoluteFill} />
           <View style={styles.folkloreBannerContent}>
             <View style={styles.folkloreBannerLeft}>
               <Text style={styles.folkloreBannerLabel}>CERITA RAKYAT</Text>
@@ -698,7 +708,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { flex: 1 },
 
-  hero: { height: 360, overflow: "hidden", justifyContent: "flex-end", backgroundColor: "#1A0A00" },
+  hero: { height: 360, overflow: "hidden", justifyContent: "flex-end", backgroundColor: Colors.background },
   batikPattern: { ...StyleSheet.absoluteFillObject, paddingTop: 20, gap: 20 },
   batikDiamondRow: { flexDirection: "row", justifyContent: "space-evenly", width: "100%" },
   batikDiamond: { width: 80, height: 80, borderWidth: 2, borderColor: Colors.gold, transform: [{ rotate: "45deg" }], opacity: 0.06 },
@@ -734,7 +744,7 @@ const styles = StyleSheet.create({
   kingdomCard: { width: 160, borderRadius: 16, overflow: "hidden" },
   kingdomCardContent: { padding: 16, height: 160, justifyContent: "flex-end" },
   kingdomCardIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center", marginBottom: 8 },
-  kingdomName: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#FFF", marginBottom: 2 },
+  kingdomName: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 2 },
   kingdomPeriod: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_500Medium", marginBottom: 6 },
   kingdomLocation: { flexDirection: "row", alignItems: "center", gap: 3 },
   kingdomLocationText: { fontSize: 10, color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" },
@@ -744,21 +754,21 @@ const styles = StyleSheet.create({
   creatureOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10 },
   creatureTypeBadge: { backgroundColor: Colors.accent + "33", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 4 },
   creatureTypeBadgeText: { fontSize: 9, color: Colors.accent, fontFamily: "Inter_600SemiBold" },
-  creatureNameOverlay: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#FFF" },
+  creatureNameOverlay: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text },
 
   placeCard: { width: 180, height: 160, borderRadius: 14, overflow: 'hidden', backgroundColor: Colors.surface },
   placeTypeBadge: { position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
-  placeTypeBadgeText: { fontSize: 9, fontFamily: "Inter_700Bold", color: '#FFF' },
+  placeTypeBadgeText: { fontSize: 9, fontFamily: "Inter_700Bold", color: Colors.text },
   placeOverlay: { position: 'absolute', bottom: 8, left: 8, right: 8 },
-  placeNameOverlay: { fontSize: 13, fontFamily: "Inter_700Bold", color: '#FFF', marginBottom: 4 },
-  distanceBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' },
-  distanceText: { fontSize: 10, color: '#FFF', fontFamily: "Inter_600SemiBold" },
+  placeNameOverlay: { fontSize: 13, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 4 },
+  distanceBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: Colors.overlay, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' },
+  distanceText: { fontSize: 10, color: Colors.text, fontFamily: "Inter_600SemiBold" },
 
   foodCard: { width: 150, backgroundColor: Colors.surface, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border },
   foodCardImage: { width: '100%', height: 100 },
   foodCardBody: { padding: 10 },
   foodCardName: { fontSize: 13, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 2 },
-  foodCardSpecialty: { fontSize: 11, color: '#E07840', fontFamily: "Inter_500Medium", marginBottom: 4 },
+  foodCardSpecialty: { fontSize: 11, color: Colors.primaryLight, fontFamily: "Inter_500Medium", marginBottom: 4 },
   foodCardFooter: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   foodCardRegion: { fontSize: 10, color: Colors.textMuted, fontFamily: "Inter_400Regular" },
 
@@ -795,7 +805,7 @@ const styles = StyleSheet.create({
   softCardTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" },
   softCardText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center", lineHeight: 20 },
   softCardButton: { backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, marginTop: 8 },
-  softCardButtonText: { color: "#FFF", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  softCardButtonText: { color: Colors.text, fontFamily: "Inter_600SemiBold", fontSize: 14 },
   destList: { width: "100%", gap: 8, marginTop: 8 },
   destItem: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.background, padding: 12, borderRadius: 10 },
   destItemText: { color: Colors.text, fontFamily: "Inter_500Medium" },
@@ -803,12 +813,12 @@ const styles = StyleSheet.create({
   kingdomBanner: { marginHorizontal: 20, borderRadius: 16, overflow: "hidden", marginBottom: 20 },
   kingdomBannerContent: { flex: 1 },
   kingdomBannerPeriod: { fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
-  kingdomBannerName: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#FFF", marginVertical: 4 },
+  kingdomBannerName: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text, marginVertical: 4 },
   kingdomBannerDesc: { fontSize: 12, color: "rgba(255,255,255,0.9)", fontFamily: "Inter_400Regular" },
   discoveryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginTop: 20, marginBottom: 12 },
   discoveryRowLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: Colors.overlay, justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: Colors.backgroundSecondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%', overflow: 'hidden' },
   modalHandle: { width: 40, height: 4, backgroundColor: Colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
   modalImage: { width: '100%', height: 220 },
@@ -830,6 +840,6 @@ const styles = StyleSheet.create({
   modalTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   modalTagText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   modalAskBtn: { backgroundColor: Colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14, marginTop: 8, marginBottom: 20 },
-  modalAskBtnText: { color: '#FFF', fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  modalAskBtnText: { color: Colors.text, fontSize: 15, fontFamily: "Inter_600SemiBold" },
   modalCloseBtn: { position: 'absolute', top: 12, right: 16, backgroundColor: Colors.surface + 'CC', borderRadius: 20, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 });

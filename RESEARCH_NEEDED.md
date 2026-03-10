@@ -188,7 +188,7 @@ To enable real Google Sign-In (currently shows Alert in dev):
    - **Web client** → set Authorized redirect URIs to `https://auth.expo.io/@<expo-username>/nusantara-journey`
    - **iOS client** → set Bundle ID to `com.nusantarajourney.app`
    - **Android client** → provide SHA-1 fingerprint from your keystore
-4. Set these environment secrets in Replit:
+4. Set these environment variables:
    - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
    - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
    - `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`

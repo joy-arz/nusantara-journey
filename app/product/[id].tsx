@@ -32,7 +32,7 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const { addItem } = useCart();
 
-  const { data: product, isLoading } = useQuery<Product>({
+  const { data: product, isLoading, isError } = useQuery<Product>({
     queryKey: [`/api/products/${id}`],
   });
 
@@ -46,10 +46,35 @@ export default function ProductDetailScreen() {
     return `Rp ${p}`;
   };
 
-  if (isLoading || !product) {
+  if (isLoading) {
     return (
       <View style={styles.loading}>
         <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (isError || !product) {
+    return (
+      <View style={[styles.loading, { gap: 16 }]}>
+        <Text style={styles.loadingText}>Product not found</Text>
+        <Pressable
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            borderRadius: 12,
+            backgroundColor: Colors.primary,
+            opacity: pressed ? 0.8 : 1,
+          })}
+          onPress={() => router.back()}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
+          <Ionicons name="arrow-back" size={20} color={Colors.text} />
+          <Text style={{ color: Colors.text, marginLeft: 8, fontFamily: "Inter_600SemiBold" }}>Go back</Text>
+        </Pressable>
       </View>
     );
   }
@@ -74,12 +99,14 @@ export default function ProductDetailScreen() {
       >
         {/* Hero */}
         <View style={styles.hero}>
-          <Image
-            source={product.imageUrl}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={200}
-          />
+          {product.imageUrl ? (
+            <Image
+              source={{ uri: product.imageUrl }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={200}
+            />
+          ) : null}
           {!product.imageUrl && (
             <LinearGradient
               colors={[Colors.bark, Colors.barkLight]}
@@ -193,13 +220,15 @@ export default function ProductDetailScreen() {
         <Pressable
           style={({ pressed }) => [styles.addToCartBtn, pressed && { opacity: 0.9 }]}
           onPress={handleAdd}
+          accessibilityLabel="Add to cart"
+          accessibilityRole="button"
         >
           <LinearGradient
             colors={[Colors.primary, Colors.terracottaDark]}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           />
-          <Ionicons name="bag-add" size={18} color="#FFF" />
+          <Ionicons name="bag-add" size={18} color={Colors.text} />
           <Text style={styles.addToCartText}>Add to Cart</Text>
         </Pressable>
       </View>
@@ -277,5 +306,5 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, overflow: "hidden",
   },
-  addToCartText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#FFF" },
+  addToCartText: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text },
 });

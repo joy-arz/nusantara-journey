@@ -100,7 +100,7 @@ function TriviaModal({ visible, onClose }: { visible: boolean; onClose: () => vo
                       ]}
                       onPress={() => handleAnswer(option)}
                     >
-                      <Text style={[styles.optionText, (isSelected || (showResult && isAnswer)) && { color: "#FFF" }]}>{option}</Text>
+                      <Text style={[styles.optionText, (isSelected || (showResult && isAnswer)) && { color: Colors.text }]}>{option}</Text>
                     </Pressable>
                   );
                 })}
@@ -174,7 +174,7 @@ function JourneyMapView() {
             />
             <Marker coordinate={{ latitude: k.lat, longitude: k.lng }}>
               <View style={[styles.journeyKingdomMarker, { backgroundColor: k.color }]}>
-                <MaterialCommunityIcons name="crown" size={10} color="#FFF" />
+                <MaterialCommunityIcons name="crown" size={10} color={Colors.text} />
               </View>
             </Marker>
           </React.Fragment>
@@ -186,7 +186,7 @@ function JourneyMapView() {
               <View style={styles.userLocationGlow} />
               <View style={styles.userLocationDot} />
               <View style={[styles.userLocationArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
-                <Ionicons name="navigate" size={10} color="#FFD700" />
+                <Ionicons name="navigate" size={10} color={Colors.gold} />
               </View>
             </View>
           </Marker>
@@ -258,7 +258,7 @@ export default function ProfileScreen() {
               </>
             ) : (
               <>
-                <Pressable style={styles.googleLoginBtn} onPress={signInWithGoogle}>
+                <Pressable style={styles.googleLoginBtn} onPress={signInWithGoogle} accessibilityLabel="Sign in with Google" accessibilityRole="button">
                   <MaterialCommunityIcons name="google" size={20} color={Colors.text} />
                   <Text style={styles.googleLoginText}>Continue with Google</Text>
                 </Pressable>
@@ -327,7 +327,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.battleBtn}>
                 <Text style={styles.battleBtnText}>Enter</Text>
-                <Ionicons name="chevron-forward" size={16} color="#FFF" />
+                <Ionicons name="chevron-forward" size={16} color={Colors.text} />
               </View>
             </View>
           </Pressable>
@@ -392,7 +392,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.settingDivider} />
               {user && (
-                <Pressable style={styles.settingItem} onPress={signOut}>
+                <Pressable style={styles.settingItem} onPress={signOut} accessibilityLabel="Sign out" accessibilityRole="button">
                   <Text style={[styles.settingText, { color: Colors.error }]}>Sign Out</Text>
                   <Ionicons name="log-out-outline" size={24} color={Colors.error} />
                 </Pressable>
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     borderWidth: 1.5, borderColor: Colors.accent,
   },
-  avatarLevelText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#FFF" },
+  avatarLevelText: { fontSize: 12, fontFamily: "Inter_700Bold", color: Colors.text },
   googleLoginBtn: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "transparent", borderWidth: 1, borderColor: Colors.border,
@@ -463,13 +463,13 @@ const styles = StyleSheet.create({
   questReward: { fontSize: 12, color: Colors.accent, fontFamily: "Inter_500Medium" },
   questBtn: { backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   questBtnDone: { backgroundColor: Colors.border },
-  questBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#FFF" },
+  questBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: Colors.text },
   battleCard: { borderRadius: 16, overflow: "hidden", height: 80 },
   battleContent: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
-  battleTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#FFF" },
+  battleTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
   battleStats: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_500Medium" },
   battleBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, gap: 4 },
-  battleBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#FFF" },
+  battleBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: Colors.text },
   journeyMapContainer: {
     height: 240, borderRadius: 16, overflow: 'hidden',
     borderWidth: 1, borderColor: Colors.border,
@@ -483,16 +483,16 @@ const styles = StyleSheet.create({
   journeyKingdomMarker: {
     width: 18, height: 18, borderRadius: 9,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#FFF',
+    borderWidth: 2, borderColor: Colors.text,
   },
   userLocationContainer: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   userLocationGlow: {
     position: 'absolute', width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#FFD700', opacity: 0.25,
+    backgroundColor: Colors.gold, opacity: 0.25,
   },
   userLocationDot: {
     width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#FFD700', borderWidth: 2, borderColor: '#FFF',
+    backgroundColor: Colors.gold, borderWidth: 2, borderColor: Colors.text,
   },
   userLocationArrow: { position: 'absolute', top: 0 },
   inventoryGrid: {
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   itemCount: { position: "absolute", top: -4, right: -4, backgroundColor: Colors.primary, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  itemCountText: { fontSize: 9, color: "#FFF", fontFamily: "Inter_700Bold" },
+  itemCountText: { fontSize: 9, color: Colors.text, fontFamily: "Inter_700Bold" },
   itemName: { fontSize: 9, fontFamily: "Inter_600SemiBold", color: Colors.text, textAlign: "center" },
   itemRarity: { fontSize: 8, fontFamily: "Inter_700Bold", marginTop: 2 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 20 },
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   triviaStart: { padding: 40, alignItems: "center", gap: 20 },
   triviaText: { fontSize: 15, color: Colors.textSecondary, textAlign: "center", lineHeight: 22 },
   primaryBtn: { backgroundColor: Colors.primary, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 30 },
-  primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#FFF" },
+  primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text },
   quizContent: { padding: 20, gap: 20 },
   quizProgress: { fontSize: 12, color: Colors.accent, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
   quizQuestion: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, lineHeight: 26 },

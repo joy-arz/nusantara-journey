@@ -322,7 +322,7 @@
   ## NEXT STEPS
 
   1. **Decide which option** (I recommend Option A)
-  2. **Search for payment integrations** on Replit
+  2. **Search for payment integrations** (e.g. Midtrans, Xendit)
   3. **Create mobile app version** (convert terminal to Expo)
   4. **Add marketplace features**
   5. **Write PIDI proposal** using template above

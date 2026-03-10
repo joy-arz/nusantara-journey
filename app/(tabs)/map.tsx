@@ -10,7 +10,6 @@ import { Colors } from "@/constants/colors";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { NusantaraMapView as MapView, NusantaraMarker as Marker, NusantaraCircle as Circle, NusantaraCallout as Callout } from "@/components/MapWrapper";
 import { HERITAGE_SITES, MUSEUMS, UMKM_ARTISANS, FOOD_STANDS, KINGDOM_CENTROIDS, Place } from "@/constants/places-data";
 import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
@@ -49,7 +48,7 @@ const KINGDOMS = [
   {
     id: 4, name: "Majapahit", period: "1293–1527 CE", location: "Trowulan, East Java",
     religion: "Hindu-Buddhist", type: "Imperial Empire",
-    color: "#C4622D", accent: "#E07840",
+    color: Colors.primary, accent: Colors.primaryLight,
     description: "The greatest Hindu-Buddhist empire in Indonesian history, unifying the entire Nusantara archipelago.",
     highlights: ["Trowulan ruins", "Candi Brahu", "Museum Trowulan"],
     products: ["Keris daggers", "Gold ornaments", "Wayang puppets"],
@@ -101,7 +100,7 @@ const KINGDOMS = [
     icon: "water",
   },
   {
-    id: 10, name: "Pajang", period: "1549–1587 CE", location: "Kartasura, Central Java",
+    id: 10, name: "Pajang", period: "1568–1586 CE", location: "Kartasura, Central Java",
     religion: "Islamic", type: "Transitional Kingdom",
     color: "#3D5C3A", accent: "#5D7C5A",
     description: "A brief but important transitional kingdom between Demak and Mataram Islam.",
@@ -194,8 +193,7 @@ function KingdomDetail({ kingdom }: { kingdom: typeof KINGDOMS[0] }) {
 }
 
 function PlaceRow({ place, onPress }: { place: Place; onPress: () => void }) {
-  const typeColor = place.type === 'museum' ? '#4A90D9' : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? '#E07840' : Colors.primary;
-  const typeLabel = place.type === 'museum' ? 'Museum' : place.type === 'umkm' ? 'UMKM' : place.type === 'food' ? 'Food' : 'Heritage';
+  const typeColor = place.type === 'museum' ? Colors.jade : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? Colors.primaryLight : Colors.primary;
   const typeIcon: any = place.type === 'museum' ? 'library' : place.type === 'umkm' ? 'hammer' : place.type === 'food' ? 'restaurant' : 'trail-sign';
 
   return (
@@ -228,7 +226,7 @@ function PlaceRow({ place, onPress }: { place: Place; onPress: () => void }) {
 }
 
 function PlaceDetailModal({ place, onClose }: { place: Place; onClose: () => void }) {
-  const typeColor = place.type === 'museum' ? '#4A90D9' : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? '#E07840' : Colors.primary;
+  const typeColor = place.type === 'museum' ? Colors.jade : place.type === 'umkm' ? Colors.gold : place.type === 'food' ? Colors.primaryLight : Colors.primary;
   const typeLabel = place.type === 'museum' ? 'Museum' : place.type === 'umkm' ? 'UMKM Artisan' : place.type === 'food' ? 'Traditional Food' : 'Heritage Site';
 
   return (
@@ -305,7 +303,7 @@ function PlaceDetailModal({ place, onClose }: { place: Place; onClose: () => voi
                   router.push({ pathname: "/guide", params: { initialMessage: `Tell me about ${place.name} and its cultural significance` } });
                 }}
               >
-                <Ionicons name="chatbubble-ellipses" size={16} color="#FFF" />
+                <Ionicons name="chatbubble-ellipses" size={16} color={Colors.text} />
                 <Text style={styles.modalAskBtnText}>Ask Arjuna about this place</Text>
               </Pressable>
             </View>
@@ -372,14 +370,25 @@ export default function MapScreen() {
   }, [activeFilter]);
 
   const showKingdoms = activeFilter === 'All' || activeFilter === 'Kingdoms';
-  const panelTitle = activeFilter === 'Museum' ? 'Nearby Museums' : activeFilter === 'UMKM' ? 'Artisan Districts' : activeFilter === 'Heritage' ? 'Heritage Sites' : activeFilter === 'Food' ? 'Traditional Food' : 'Kingdoms History';
+  const panelTitle = (() => {
+    if (selectedPlace) {
+      const t = selectedPlace.type;
+      return t === 'museum' ? 'Museum' : t === 'umkm' ? 'UMKM Artisan' : t === 'food' ? 'Traditional Food' : 'Heritage Site';
+    }
+    if (activeFilter === 'Museum') return 'Nearby Museums';
+    if (activeFilter === 'UMKM') return 'Artisan Districts';
+    if (activeFilter === 'Heritage') return 'Heritage Sites';
+    if (activeFilter === 'Food') return 'Traditional Food';
+    if (activeFilter === 'Kingdoms') return 'Kingdoms History';
+    return 'Explore Nusantara';
+  })();
 
   const filterPillColor = (f: FilterType) => {
     if (f !== activeFilter) return Colors.surface;
-    if (f === 'Museum') return '#4A90D9';
+    if (f === 'Museum') return Colors.jade;
     if (f === 'UMKM') return Colors.gold;
     if (f === 'Heritage') return Colors.primary;
-    if (f === 'Food') return '#E07840';
+    if (f === 'Food') return Colors.primaryLight;
     return Colors.terracotta;
   };
 
@@ -403,15 +412,15 @@ export default function MapScreen() {
               coordinate={{ latitude: place.lat, longitude: place.lng }}
               onPress={() => setSelectedPlace(place)}
               pinColor={
-                place.type === 'museum' ? '#4A90D9' :
+                place.type === 'museum' ? Colors.jade :
                 place.type === 'umkm' ? Colors.gold :
-                place.type === 'food' ? '#E07840' :
+                place.type === 'food' ? Colors.primaryLight :
                 Colors.primary
               }
             >
               <Callout tooltip>
                 <View style={styles.callout}>
-                  <Ionicons name={place.type === 'museum' ? 'library' : place.type === 'umkm' ? 'hammer' : place.type === 'food' ? 'restaurant' : 'business'} size={14} color="#FFF" />
+                  <Ionicons name={place.type === 'museum' ? 'library' : place.type === 'umkm' ? 'hammer' : place.type === 'food' ? 'restaurant' : 'business'} size={14} color={Colors.text} />
                   <Text style={styles.calloutText}>{place.name}</Text>
                 </View>
               </Callout>
@@ -423,7 +432,7 @@ export default function MapScreen() {
               <Circle center={{ latitude: k.lat, longitude: k.lng }} radius={80000} strokeColor={k.color} fillColor={k.color + "18"} />
               <Marker coordinate={{ latitude: k.lat, longitude: k.lng }} title={k.name} description={k.period}>
                 <View style={[styles.kingdomMarker, { backgroundColor: k.color }]}>
-                  <MaterialCommunityIcons name="crown" size={12} color="#FFF" />
+                  <MaterialCommunityIcons name="crown" size={12} color={Colors.text} />
                 </View>
               </Marker>
             </React.Fragment>
@@ -433,10 +442,10 @@ export default function MapScreen() {
             <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
               <View style={styles.userLocationContainer}>
                 <View style={styles.userLocationGlow} />
-                <View style={styles.userLocationDot} />
-                <View style={[styles.userLocationArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
-                  <Ionicons name="navigate" size={12} color="#FFD700" />
+                <View style={[styles.userLocationArrowRing, { transform: [{ rotate: `${heading}deg` }] }]}>
+                  <View style={styles.userLocationArrowHead} />
                 </View>
+                <View style={styles.userLocationDot} />
               </View>
             </Marker>
           )}
@@ -545,7 +554,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1,
   },
   filterText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textSecondary },
-  filterTextActive: { color: "#FFF" },
+  filterTextActive: { color: Colors.text },
 
   bottomPanel: {
     position: 'absolute',
@@ -620,23 +629,33 @@ const styles = StyleSheet.create({
   kingdomMarker: {
     width: 20, height: 20, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#FFF',
+    borderWidth: 2, borderColor: Colors.text,
   },
 
-  userLocationContainer: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  userLocationContainer: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   userLocationGlow: {
     position: 'absolute',
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#FFD700',
-    opacity: 0.25,
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: Colors.gold,
+    opacity: 0.18,
+  },
+  userLocationArrowRing: {
+    position: 'absolute',
+    width: 40, height: 40,
+    alignItems: 'center',
+  },
+  userLocationArrowHead: {
+    width: 0, height: 0,
+    borderLeftWidth: 7, borderRightWidth: 7, borderBottomWidth: 14,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: Colors.gold,
+    top: -2,
   },
   userLocationDot: {
-    width: 14, height: 14, borderRadius: 7,
-    backgroundColor: '#FFD700',
-    borderWidth: 2, borderColor: '#FFF',
-  },
-  userLocationArrow: {
-    position: 'absolute', top: 0,
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: Colors.gold,
+    borderWidth: 3, borderColor: Colors.text,
+    zIndex: 2,
   },
 
   kingdomItem: {
@@ -671,7 +690,7 @@ const styles = StyleSheet.create({
   },
   guideButtonText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: Colors.overlay, justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: Colors.backgroundSecondary,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -702,7 +721,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 14, borderRadius: 14, marginTop: 8, marginBottom: 20,
   },
-  modalAskBtnText: { color: '#FFF', fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  modalAskBtnText: { color: Colors.text, fontSize: 15, fontFamily: "Inter_600SemiBold" },
   modalCloseBtn: {
     position: 'absolute', top: 12, right: 16,
     backgroundColor: Colors.surface + 'CC',

@@ -27,7 +27,7 @@ To run the app locally, you need to start both the backend server and the Expo d
 
 2. **Start the Expo Development Server**:
    ```bash
-   npm run expo:dev
+   npm start
    ```
    The frontend runs on port 8081.
 
@@ -36,15 +36,30 @@ To run the app locally, you need to start both the backend server and the Expo d
 
 ### Environment Variables
 Ensure you have a `.env` file or set environment variables in your terminal:
-- `DATABASE_URL`: Your PostgreSQL connection string.
+- `DATABASE_URL`: Your Supabase PostgreSQL connection string.
+- `OPENAI_API_KEY`: Required for the "Arjuna" AI Guide chat.
+- `SESSION_SECRET`: Required in production; set a strong random string for session cookies.
+- `EXPO_PUBLIC_DOMAIN`: Set to your backend host (e.g. `localhost:5000`) when the app runs against a custom API.
+- `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins (e.g. `http://localhost:8081`).
+
+**Firebase (server-side)**:
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`: From Firebase Console > Project Settings > Service Accounts > Generate New Private Key.
+
+**Firebase (client-side)**:
+- `EXPO_PUBLIC_FIREBASE_API_KEY`, `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`, `EXPO_PUBLIC_FIREBASE_PROJECT_ID`, `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`, `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `EXPO_PUBLIC_FIREBASE_APP_ID`: From Firebase Console > Project Settings > General > Your Apps > Web App.
+
+**Google OAuth**:
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`: From Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs (Web).
+- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`: OAuth client ID for iOS.
+- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`: OAuth client ID for Android (use SHA-1 from your signing keystore).
 
 ---
 
 ## 2. App Build Process (EAS Build)
 
-We use Expo Application Services (EAS) to build standalone binaries.
+We use Expo Application Services (EAS) to build standalone binaries. See [BUILD_AND_TEST.md](BUILD_AND_TEST.md) for the full step-by-step guide.
 
-### Steps
+### Quick Steps
 1. **Install EAS CLI**:
    ```bash
    npm install -g eas-cli
@@ -63,10 +78,6 @@ We use Expo Application Services (EAS) to build standalone binaries.
 
 ### Bundle Identifiers
 Bundle identifiers are configured in `app.json` under `ios.bundleIdentifier` and `android.package`. They uniquely identify your app on the App Store and Google Play Store.
-
-### Local APK vs Store
-- **Local APK**: Useful for testing on Android devices without publishing. Use `eas build --platform android --profile preview` to get an installable APK.
-- **Store**: Use the default production profile to build for store submission.
 
 ---
 
@@ -97,21 +108,31 @@ Nusantara Journey uses PostgreSQL. We recommend Supabase for a managed database.
 
 ---
 
-## 4. Replit Cleanup
+## 4. Firebase & Google Sign-In Setup
 
-- **.replit**: This file is required for Replit workflows. If you are running the project entirely locally or on another host, it is safe to remove.
-- **replit.md**: This is a memory file for the Replit Agent. It is safe to delete if you are not using the Replit Agent.
+Authentication uses **Firebase Auth** with Google as the sign-in provider. The Expo client obtains a Google ID token via `expo-auth-session`, exchanges it for a Firebase credential, then sends the Firebase ID token to the Express backend, which verifies it using `firebase-admin`.
 
----
+### Step-by-Step
 
-## 5. Agent Folder
+1. **Create a Firebase Project** at [console.firebase.google.com](https://console.firebase.google.com).
+2. **Enable Google Sign-In**: Go to Authentication > Sign-in Method > Google and enable it.
+3. **Register your apps**:
+   - **Web app**: Add a web app to get the Firebase config values (apiKey, authDomain, etc.).
+   - **Android app**: Add an Android app with package name `com.nusantarajourney` and your SHA-1 fingerprint.
+   - **iOS app**: Add an iOS app with bundle ID `com.nusantarajourney`.
+4. **Create a Service Account Key**: Go to Project Settings > Service Accounts > Generate New Private Key. Use the values for `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`.
+5. **Create Google Cloud OAuth Credentials**: Go to [Google Cloud Console](https://console.cloud.google.com) > APIs & Services > Credentials > Create OAuth 2.0 Client IDs for Web, Android (with SHA-1), and iOS.
+6. **Fill in your `.env`** with all the values from steps 3-5.
 
-The `.replit_agent` folder is Replit's internal configuration folder for the AI agent. It is empty by design. Users do not need to add anything to this folder.
+### SHA-1 Fingerprint (Android)
 
----
+For the debug keystore:
+```bash
+keytool -keystore ~/.android/debug.keystore -list -v -storepass android
+```
 
-## 6. Additional Configuration
+For a production keystore, use the same command with your release keystore path and password.
 
-To enable full functionality, set these additional environment variables:
+## 5. Additional Configuration
+
 - `OPENAI_API_KEY`: Required for the "Arjuna" AI Guide chat functionality.
-- `GOOGLE_CLIENT_ID`: Required for Google Authentication.

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useMemo, ReactNode } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface CartItem {
   id: number;

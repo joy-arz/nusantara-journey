@@ -119,7 +119,7 @@ const bubbleStyles = StyleSheet.create({
     maxWidth: "80%",
   },
   text: { fontSize: 14, lineHeight: 20, fontFamily: "Inter_400Regular" },
-  textUser: { color: "#FFF" },
+  textUser: { color: Colors.text },
   textAssistant: { color: Colors.text },
 });
 
@@ -131,11 +131,13 @@ export default function GuideScreen() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
   const { gainXP } = useGame();
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPadding = Platform.OS === "web" ? 34 + 16 : insets.bottom + 16;
+  const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
+  const bottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + 8;
 
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
@@ -154,17 +156,21 @@ export default function GuideScreen() {
   });
 
   const loadConversation = async (id: number) => {
+    setLoadError(null);
     try {
       const res = await apiRequest("GET", `/api/conversations/${id}`);
       const data = await res.json();
       setMessages(data.messages || []);
       setActiveConvId(id);
       setShowSidebar(false);
-    } catch (e) {}
+    } catch {
+      setLoadError("Could not load conversation.");
+    }
   };
 
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
+    setSendError(null);
     const text = input.trim();
     setInput("");
 
@@ -218,11 +224,14 @@ export default function GuideScreen() {
             if (event.done) {
               qc.invalidateQueries({ queryKey: ["/api/conversations"] });
             }
-          } catch {}
+          } catch {
+            // ignore malformed SSE line
+          }
         }
       }
     } catch (e) {
       console.error(e);
+      setSendError("Could not send. Try again.");
     } finally {
       setIsStreaming(false);
     }
@@ -249,7 +258,7 @@ export default function GuideScreen() {
           <Text style={styles.headerTitle}>Arjuna</Text>
           <Text style={styles.headerSub}>Indonesian Culture Guide</Text>
         </View>
-        <Pressable style={styles.headerBtn} onPress={newChat}>
+        <Pressable style={styles.headerBtn} onPress={newChat} accessibilityLabel="New chat" accessibilityRole="button">
           <Ionicons name="add" size={22} color={Colors.primary} />
         </Pressable>
       </View>
@@ -260,7 +269,7 @@ export default function GuideScreen() {
           style={StyleSheet.absoluteFill} 
           onPress={() => setShowSidebar(false)}
         >
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.5)" }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.overlay }]} />
         </Pressable>
       )}
 
@@ -285,6 +294,9 @@ export default function GuideScreen() {
               </Pressable>
             ))
           )}
+          {loadError ? (
+            <Text style={[styles.sidebarEmpty, { color: Colors.error, marginTop: 12 }]}>{loadError}</Text>
+          ) : null}
           </View>
         </View>
       )}
@@ -329,9 +341,14 @@ export default function GuideScreen() {
       )}
 
       {/* Input */}
+      {sendError ? (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+          <Text style={{ fontSize: 12, color: Colors.error }}>{sendError}</Text>
+        </View>
+      ) : null}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <View style={[styles.inputBar, { paddingBottom: bottomPadding }]}>
           <View style={styles.inputWrap}>
@@ -351,8 +368,10 @@ export default function GuideScreen() {
               style={[styles.sendBtn, (!input.trim() || isStreaming) && styles.sendBtnDisabled]}
               onPress={sendMessage}
               disabled={!input.trim() || isStreaming}
+              accessibilityLabel="Send message"
+              accessibilityRole="button"
             >
-              <Ionicons name="arrow-up" size={18} color="#FFF" />
+              <Ionicons name="arrow-up" size={18} color={Colors.text} />
             </Pressable>
           </View>
         </View>

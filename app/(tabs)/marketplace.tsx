@@ -9,7 +9,6 @@ import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/lay
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
-import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "@/constants/colors";
 import { useCart } from "@/context/CartContext";
 import { router } from "expo-router";
@@ -76,12 +75,14 @@ function ProductCard({ product }: { product: Product }) {
       onPress={() => router.push({ pathname: "/product/[id]", params: { id: product.id } })}
     >
       <View style={styles.cardImage}>
-        <Image
-          source={product.imageUrl}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={200}
-        />
+        {product.imageUrl ? (
+          <Image
+            source={{ uri: product.imageUrl }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={200}
+          />
+        ) : null}
         {!product.imageUrl && (
           <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.bark + "30", alignItems: 'center', justifyContent: 'center' }]}>
             <MaterialCommunityIcons 
@@ -117,8 +118,10 @@ function ProductCard({ product }: { product: Product }) {
           <Pressable
             style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.8 }]}
             onPress={handleAdd}
+            accessibilityLabel="Add to cart"
+            accessibilityRole="button"
           >
-            <Ionicons name="add" size={16} color="#FFF" />
+            <Ionicons name="add" size={16} color={Colors.text} />
           </Pressable>
         </View>
       </View>
@@ -131,13 +134,13 @@ export default function MarketplaceScreen() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [showCart, setShowCart] = useState(false);
-  const { items, totalItems, totalPrice, removeItem, updateQuantity } = useCart();
+  const { items, totalItems, totalPrice, updateQuantity } = useCart();
 
   const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
   const bottomPadding = Platform.OS === "web" ? WEB_BOTTOM_INSET : 0;
   const contentBottomPadding = Platform.OS === "web" ? TAB_BAR_HEIGHT + WEB_BOTTOM_INSET : TAB_BAR_HEIGHT + insets.bottom;
 
-  const { data: products = [], isLoading } = useQuery<Product[]>({
+  const { data: products = [], isLoading, isError, refetch } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
 
@@ -166,6 +169,8 @@ export default function MarketplaceScreen() {
           <Pressable
             style={({ pressed }) => [styles.cartBtn, pressed && { opacity: 0.8 }]}
             onPress={() => setShowCart(!showCart)}
+            accessibilityLabel={totalItems > 0 ? `Cart, ${totalItems} items` : "Open cart"}
+            accessibilityRole="button"
           >
             <Ionicons name="bag" size={22} color={Colors.text} />
             {totalItems > 0 && (
@@ -207,7 +212,7 @@ export default function MarketplaceScreen() {
               <Ionicons
                 name={cat.icon as any}
                 size={13}
-                color={activeCategory === cat.id ? "#FFF" : Colors.textMuted}
+                color={activeCategory === cat.id ? Colors.text : Colors.textMuted}
               />
               <Text style={[styles.catChipText, activeCategory === cat.id && styles.catChipTextActive]}>
                 {cat.label}
@@ -228,7 +233,7 @@ export default function MarketplaceScreen() {
           style={styles.modalBackdrop} 
           onPress={() => setShowCart(false)}
         >
-          <View style={styles.modalBackdropBlur} />
+          <View style={styles.modalBackdrop} />
         </Pressable>
         <View style={styles.cartSheet}>
           <View style={styles.cartSheetHeader}>
@@ -265,13 +270,15 @@ export default function MarketplaceScreen() {
                 <Text style={styles.cartTotalLabel}>Total</Text>
                 <Text style={styles.cartTotalValue}>{formatPrice(totalPrice)}</Text>
               </View>
-              <Pressable 
+              <Pressable
                 style={styles.checkoutBtn}
-                onPress={() => {}}
+                onPress={() => { setShowCart(false); }}
+                accessibilityLabel="Checkout"
+                accessibilityRole="button"
               >
                 <View style={styles.checkoutBtnContent}>
                   <Text style={styles.checkoutBtnText}>Checkout</Text>
-                  <Ionicons name="arrow-forward" size={16} color="#FFF" />
+                  <Ionicons name="arrow-forward" size={16} color={Colors.text} />
                 </View>
               </Pressable>
             </ScrollView>
@@ -280,7 +287,20 @@ export default function MarketplaceScreen() {
       </Modal>
 
       {/* Products Grid */}
-      {isLoading ? (
+      {isError ? (
+        <View style={styles.empty}>
+          <Ionicons name="cloud-offline" size={40} color={Colors.textMuted} />
+          <Text style={styles.loadingText}>Could not load products. Check your connection.</Text>
+          <Pressable
+            style={({ pressed }) => [styles.catChip, styles.catChipActive, { marginTop: 12, opacity: pressed ? 0.8 : 1 }]}
+            onPress={() => refetch()}
+            accessibilityLabel="Retry loading products"
+            accessibilityRole="button"
+          >
+            <Text style={styles.catChipTextActive}>Retry</Text>
+          </Pressable>
+        </View>
+      ) : isLoading ? (
         <View style={styles.loading}>
           <Text style={styles.loadingText}>Loading artisan products...</Text>
         </View>
@@ -324,7 +344,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: "center", justifyContent: "center",
   },
-  cartBadgeText: { fontSize: 10, color: "#FFF", fontFamily: "Inter_700Bold" },
+  cartBadgeText: { fontSize: 10, color: Colors.text, fontFamily: "Inter_700Bold" },
   searchBar: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: Colors.surface,
@@ -342,7 +362,7 @@ const styles = StyleSheet.create({
   },
   catChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   catChipText: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
-  catChipTextActive: { color: "#FFF" },
+  catChipTextActive: { color: Colors.text },
   grid: { padding: 16 },
   row: { gap: 12, marginBottom: 12 },
   card: {
@@ -381,7 +401,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: Colors.overlay,
   },
   cartSheet: {
     position: "absolute", bottom: 0, right: 0, left: 0, height: "80%",
@@ -432,7 +452,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, paddingVertical: 16,
   },
-  checkoutBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#FFF" },
+  checkoutBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.text },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: { fontSize: 14, color: Colors.textMuted, fontFamily: "Inter_400Regular" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },

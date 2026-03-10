@@ -17,6 +17,7 @@ export const users = pgTable("users", {
 
 export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });

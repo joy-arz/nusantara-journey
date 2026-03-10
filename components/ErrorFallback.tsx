@@ -7,30 +7,28 @@ import {
   ScrollView,
   Text,
   Modal,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { Colors } from "@/constants/colors";
 
 export type ErrorFallbackProps = {
   error: Error;
   resetError: () => void;
 };
 
-export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const insets = useSafeAreaInsets();
+const theme = {
+  background: Colors.background,
+  backgroundSecondary: Colors.surface,
+  text: Colors.text,
+  textSecondary: Colors.textSecondary,
+  link: Colors.primary,
+  buttonText: Colors.text,
+};
 
-  const theme = {
-    background: isDark ? "#000000" : "#FFFFFF",
-    backgroundSecondary: isDark ? "#1C1C1E" : "#F2F2F7",
-    text: isDark ? "#FFFFFF" : "#000000",
-    textSecondary: isDark ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
-    link: "#007AFF",
-    buttonText: "#FFFFFF",
-  };
+export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
+  const insets = useSafeAreaInsets();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -120,11 +118,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
               <View
                 style={[
                   styles.modalHeader,
-                  {
-                    borderBottomColor: isDark
-                      ? "rgba(255, 255, 255, 0.1)"
-                      : "rgba(0, 0, 0, 0.1)",
-                  },
+                  { borderBottomColor: Colors.border },
                 ]}
               >
                 <Text style={[styles.modalTitle, { color: theme.text }]}>

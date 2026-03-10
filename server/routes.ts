@@ -9,12 +9,12 @@ import {
 import { eq, desc, sql } from "drizzle-orm";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import { firebaseAuth } from "./firebase-admin";
 
 const SessionStore = MemoryStore(session);
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1",
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 const NUSANTARA_SYSTEM_PROMPT = `You are Arjuna, an expert AI guide for Indonesian cultural heritage, history, and tourism. You have deep knowledge of:
@@ -28,7 +28,7 @@ HISTORY: 10 Indonesian kingdoms spanning 7th-17th century:
 - Singhasari (1222-1292 CE, East Java) - Founded by Ken Arok
 - Majapahit (1293-1527 CE, East Java) - Greatest Hindu-Buddhist empire, unified Nusantara
 - Demak (1475-1554 CE, Central Java) - First Islamic sultanate in Java
-- Pajang (1549-1587 CE, Central Java) - Islamic kingdom
+- Pajang (1568-1586 CE, Central Java) - Islamic kingdom
 - Mataram Islam (1586-1755 CE, Central Java) - Last major Javanese kingdom before colonization
 
 MYTHOLOGY: 22+ Indonesian mythological creatures:
@@ -65,7 +65,7 @@ async function seedProducts() {
       rating: 4.9, 
       reviewCount: 124, 
       inStock: 15,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Batik_Megamendung.jpg/400px-Batik_Megamendung.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Batik_Mega_Mendung.jpg/640px-Batik_Mega_Mendung.jpg"
     },
     { 
       name: "Keris Majapahit Replica", 
@@ -76,7 +76,7 @@ async function seedProducts() {
       rating: 4.8, 
       reviewCount: 67, 
       inStock: 5,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Keris_Majapahit.jpg/400px-Keris_Majapahit.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Keris_museum_Mandilaras.jpg/640px-Keris_museum_Mandilaras.jpg"
     },
     { 
       name: "Batik Parang Rusak", 
@@ -87,7 +87,7 @@ async function seedProducts() {
       rating: 4.7, 
       reviewCount: 89, 
       inStock: 12,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Batik_parang.jpg/400px-Batik_parang.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Batik_pedalaman_-_parang_klithik.JPG/640px-Batik_pedalaman_-_parang_klithik.JPG"
     },
     { 
       name: "Wayang Kulit Set", 
@@ -98,7 +98,7 @@ async function seedProducts() {
       rating: 5.0, 
       reviewCount: 43, 
       inStock: 3,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Wayang_Kulit.jpg/400px-Wayang_Kulit.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bercerita_dengan_Wayang.jpg/640px-Bercerita_dengan_Wayang.jpg"
     },
     { 
       name: "Silver Kotagede Ring", 
@@ -109,7 +109,7 @@ async function seedProducts() {
       rating: 4.6, 
       reviewCount: 156, 
       inStock: 20,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Kotagede_silverwork.jpg/400px-Kotagede_silverwork.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/79/COLLECTIE_TROPENMUSEUM_Zilversmederij_in_Kotagede_of_Jogjakarta_TMnr_60054140.jpg"
     },
     { 
       name: "Tenun Ikat Sumba", 
@@ -120,7 +120,7 @@ async function seedProducts() {
       rating: 4.9, 
       reviewCount: 38, 
       inStock: 7,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Sumba_ikat.jpg/400px-Sumba_ikat.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/38/Tenun_Ikat_Kodi%2C_SBD%2C_NTT.jpg"
     },
     { 
       name: "Ukiran Jepara Frame", 
@@ -131,7 +131,7 @@ async function seedProducts() {
       rating: 4.7, 
       reviewCount: 72, 
       inStock: 8,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Jepara_wood_carving.jpg/400px-Jepara_wood_carving.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/44/Indah%2C_Itu_Proses_Keindahan.jpg"
     },
     { 
       name: "Gamelan Mini Set", 
@@ -142,7 +142,7 @@ async function seedProducts() {
       rating: 4.8, 
       reviewCount: 29, 
       inStock: 4,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Gamelan.jpg/400px-Gamelan.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/e/e6/COLLECTIE_TROPENMUSEUM_Gong_hangend_aan_een_standaard_onderdeel_van_gamelan_Slendro_TMnr_500-26a.jpg"
     },
     { 
       name: "Batik Kawung Tulis", 
@@ -153,7 +153,7 @@ async function seedProducts() {
       rating: 4.8, 
       reviewCount: 101, 
       inStock: 18,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Kawung_batik.jpg/400px-Kawung_batik.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Batik_pattern_-_kawung.jpg/640px-Batik_pattern_-_kawung.jpg"
     },
     { 
       name: "Topeng Malangan Mask", 
@@ -164,7 +164,7 @@ async function seedProducts() {
       rating: 4.9, 
       reviewCount: 55, 
       inStock: 6,
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Topeng_Malang.jpg/400px-Topeng_Malang.jpg"
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Menari_Topeng_Malang.jpg/640px-Menari_Topeng_Malang.jpg"
     },
   ];
 
@@ -180,6 +180,11 @@ declare module "express-session" {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET is required in production. Set it in your environment.");
+  }
+  const sessionSecret = process.env.SESSION_SECRET || "nusantara_secret";
+
   await seedProducts();
 
   app.use(
@@ -190,40 +195,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }),
       resave: false,
       saveUninitialized: false,
-      secret: process.env.SESSION_SECRET || "nusantara_secret",
+      secret: sessionSecret,
     })
   );
 
-  app.post("/api/auth/google", async (req: Request, res: Response) => {
+  app.post("/api/auth/firebase", async (req: Request, res: Response) => {
     try {
-      const { googleId, email, displayName, avatarUrl } = req.body;
-      
-      let [user] = await db.select().from(users).where(eq(users.googleId, googleId));
-      
+      const { idToken } = req.body;
+      if (!idToken) {
+        return res.status(400).json({ error: "Missing idToken" });
+      }
+
+      const decoded = await firebaseAuth.verifyIdToken(idToken);
+      const { uid, email, name, picture } = decoded;
+
+      let [user] = await db.select().from(users).where(eq(users.googleId, uid));
+
       if (!user) {
-        // Create new user, generate a temporary username
-        const username = email.split('@')[0] + "_" + Math.random().toString(36).substring(2, 5);
+        const username = (email?.split("@")[0] || "user") + "_" + Math.random().toString(36).substring(2, 5);
         [user] = await db.insert(users).values({
-          googleId,
-          email,
-          displayName,
-          avatarUrl,
+          googleId: uid,
+          email: email || null,
+          displayName: name || null,
+          avatarUrl: picture || null,
           username,
-          password: "google_authenticated", // Placeholder
+          password: "firebase_authenticated",
         }).returning();
       } else {
-        // Update user info
         [user] = await db.update(users)
-          .set({ displayName, avatarUrl, email })
+          .set({ displayName: name || user.displayName, avatarUrl: picture || user.avatarUrl, email: email || user.email })
           .where(eq(users.id, user.id))
           .returning();
       }
-      
+
       req.session.userId = user.id;
-      res.json(user);
+      res.json({ id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, email: user.email });
     } catch (e) {
-      console.error(e);
-      res.status(500).json({ error: "Failed to authenticate" });
+      console.error("Firebase auth error:", e);
+      res.status(401).json({ error: "Invalid or expired token" });
     }
   });
 
@@ -247,7 +256,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/conversations", async (req: Request, res: Response) => {
     try {
-      const all = await db.select().from(conversations).orderBy(desc(conversations.createdAt));
+      const userId = req.session.userId;
+      const all = userId
+        ? await db.select().from(conversations).where(eq(conversations.userId, userId)).orderBy(desc(conversations.createdAt))
+        : await db.select().from(conversations).orderBy(desc(conversations.createdAt));
       res.json(all);
     } catch (e) { res.status(500).json({ error: "Failed to fetch conversations" }); }
   });
@@ -265,7 +277,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations", async (req: Request, res: Response) => {
     try {
       const { title } = req.body;
-      const [conv] = await db.insert(conversations).values({ title: title || "New Conversation" }).returning();
+      const userId = req.session.userId || null;
+      const [conv] = await db.insert(conversations).values({ title: title || "New Conversation", userId }).returning();
       res.status(201).json(conv);
     } catch (e) { res.status(500).json({ error: "Failed to create conversation" }); }
   });
@@ -321,8 +334,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", async (req: Request, res: Response) => {
     try {
       const { category } = req.query;
-      let query = db.select().from(products);
-      const all = category ? await db.select().from(products).where(eq(products.category, category as string)) : await db.select().from(products);
+      const all = category
+        ? await db.select().from(products).where(eq(products.category, category as string))
+        : await db.select().from(products);
       res.json(all);
     } catch (e) { res.status(500).json({ error: "Failed to fetch products" }); }
   });

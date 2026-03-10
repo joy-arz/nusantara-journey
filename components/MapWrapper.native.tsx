@@ -48,6 +48,6 @@ export function NusantaraCircle(props: CircleProps) {
   return <Circle {...props as any} />;
 }
 
-export function NusantaraCallout({ children }: { children?: React.ReactNode }) {
-  return <Callout>{children}</Callout>;
+export function NusantaraCallout({ children, tooltip }: { children?: React.ReactNode; tooltip?: boolean }) {
+  return <Callout tooltip={tooltip}>{children}</Callout>;
 }

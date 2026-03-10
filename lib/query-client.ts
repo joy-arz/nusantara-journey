@@ -1,15 +1,25 @@
 import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import Constants from "expo-constants";
 
 /**
- * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
- * @returns {string} The API base URL
+ * Gets the base URL for the Express API server (e.g., "http://192.168.1.5:3000").
+ * In dev on a physical device, extracts the host IP from Expo's debugger host
+ * so we don't hit "localhost" which would refer to the phone itself.
  */
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN || "localhost:5000";
+  if (__DEV__) {
+    const debuggerHost =
+      Constants.expoGoConfig?.debuggerHost ??
+      (Constants as any).manifest?.debuggerHost;
+    if (debuggerHost) {
+      const ip = debuggerHost.split(":")[0];
+      return `http://${ip}:3000/`;
+    }
+  }
 
+  let host = process.env.EXPO_PUBLIC_DOMAIN || "localhost:3000";
   let url = new URL(host.startsWith("localhost") ? `http://${host}` : `https://${host}`);
-
   return url.href;
 }
 
