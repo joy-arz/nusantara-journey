@@ -72,6 +72,14 @@ export const ALL_QUESTS: Quest[] = [
     itemRewardId: "prambanan_relief_rubbing",
     icon: "sparkles",
   },
+  {
+    id: "quest_beyond_bali",
+    title: "Explore heritage beyond Bali",
+    description: "Visit an under-visited site like Muara Jambi or Trowulan to help redistribute tourism across the archipelago.",
+    xpReward: 175,
+    itemRewardId: "trowulan_gold_coin",
+    icon: "compass",
+  },
 ];
 
 export function getDailyQuests() {

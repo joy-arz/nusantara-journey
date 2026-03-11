@@ -6,6 +6,17 @@ An AI-powered Indonesian cultural heritage tourism and UMKM marketplace mobile a
   <img src="assets/images/icon.png" alt="Nusantara Journey" width="120" />
 </p>
 
+## The Problem
+
+Indonesia faces a **heritage tourism revenue gap** compared to Thailand and Vietnam. Despite tourists staying longer in Indonesia (~10.7 nights vs ~8–10 in regional peers), daily spend is ~40% lower (~$118/day vs ~$160–200). Tourism contributes only 5.5% to Indonesia's GDP vs 12%+ in Thailand and 8.8% in Vietnam. The root causes:
+
+- **Discovery & payment gap** — Indonesia has 1,003 man-made attractions, but only a fraction are "market-ready." Heritage sites, UMKM crafts, and guided experiences remain invisible or difficult to pay for digitally.
+- **UMKM digital exclusion** — ~70% of artisan MSMEs operate offline only; only 20% of rural craft enterprises have e-commerce presence. Yet MSMEs that adopt digital tools see ~40% revenue increase.
+- **Bali concentration** — Over 70% of international arrivals concentrate in Bali, while provinces like Jambi (Muara Jambi) and East Java (Trowulan) remain under-visited despite world-class heritage.
+- **Mobile-app gap** — Indonesia has 80%+ internet penetration and 33% monthly AI adoption, yet less than 1% of top applications are dedicated to national heritage or cultural education.
+
+Nusantara Journey addresses these by integrating GPS discovery, AI-guided heritage tours, a direct UMKM marketplace, and gamified quests that incentivize exploration beyond Bali.
+
 ## Features
 
 - **GPS-Aware Discovery** — Real-time location integration to discover historical kingdoms and nearby heritage sites.

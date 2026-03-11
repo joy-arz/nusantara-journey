@@ -29,9 +29,9 @@ const KINGDOMS = [
 
 const INDONESIA_STATS = [
   { icon: "island" as any, value: "17,000+", label: "Islands" },
-  { icon: "account-group" as any, value: "300+", label: "Ethnic Groups" },
+  { icon: "account-group" as any, value: "1,300+", label: "Ethnic Groups" },
   { icon: "translate" as any, value: "700+", label: "Languages" },
-  { icon: "earth" as any, value: "10", label: "UNESCO Heritage" },
+  { icon: "earth" as any, value: "1,003", label: "Heritage Sites" },
   { icon: "crown" as any, value: "10", label: "Kingdoms" },
   { icon: "book-open-variant" as any, value: "55+", label: "Folklore" },
 ];
