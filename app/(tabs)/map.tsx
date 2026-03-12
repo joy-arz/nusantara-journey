@@ -337,22 +337,38 @@ export default function MapScreen() {
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    let headingSub: any = null;
+    let headingSub: { remove?: () => void } | null = null;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      headingSub = await Location.watchHeadingAsync((h) => {
-        const raw = h.trueHeading ?? h.magHeading ?? 0;
-        let delta = raw - (headingRaw.current % 360);
-        if (delta > 180) delta -= 360;
-        if (delta < -180) delta += 360;
-        headingRaw.current += delta;
-        headingSV.value = withTiming(headingRaw.current, { duration: 200 });
-      });
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        // watchHeadingAsync is unreliable on Android and can cause force closes - iOS only
+        if (Platform.OS === 'ios') {
+          headingSub = await Location.watchHeadingAsync(
+            (h) => {
+              const raw = h.trueHeading ?? h.magHeading ?? 0;
+              let delta = raw - (headingRaw.current % 360);
+              if (delta > 180) delta -= 360;
+              if (delta < -180) delta += 360;
+              headingRaw.current += delta;
+              headingSV.value = withTiming(headingRaw.current, { duration: 200 });
+            },
+            () => {} // errorHandler - suppress to avoid unhandled rejection
+          );
+        }
+      } catch (_) {
+        // Location/heading errors should not crash the app
+      }
     })();
-    return () => { if (headingSub) headingSub.remove(); };
+    return () => {
+      try {
+        if (headingSub?.remove) headingSub.remove();
+      } catch (_) {
+        // Known bug: remove() can crash on some RN versions
+      }
+    };
   }, []);
 
   const handleSelectKingdom = (id: number) => {

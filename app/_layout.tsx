@@ -8,7 +8,7 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -44,7 +44,10 @@ async function requestAllPermissions() {
   ]);
 }
 
+const FONT_LOAD_TIMEOUT_MS = 8000;
+
 export default function RootLayout() {
+  const [fontTimeoutReached, setFontTimeoutReached] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -53,10 +56,17 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    const t = setTimeout(() => setFontTimeoutReached(true), FONT_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  const ready = fontsLoaded || fontError || fontTimeoutReached;
+
+  useEffect(() => {
+    if (ready) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [ready]);
 
   const { status, downloadAndApply, applyUpdate } = useAppUpdate();
 
@@ -65,7 +75,7 @@ export default function RootLayout() {
     startBackgroundLocation().catch(console.warn);
   }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!ready) return null;
 
   return (
     <ErrorBoundary>
