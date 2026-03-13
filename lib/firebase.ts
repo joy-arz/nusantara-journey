@@ -1,9 +1,10 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import {
   initializeAuth,
   getAuth,
   getReactNativePersistence,
   GoogleAuthProvider,
+  Auth,
 } from "firebase/auth";
 import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -16,18 +17,29 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const hasValidConfig =
+  typeof firebaseConfig.projectId === "string" &&
+  firebaseConfig.projectId.length > 0 &&
+  typeof firebaseConfig.appId === "string" &&
+  firebaseConfig.appId.length > 0;
 
-let auth;
-try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-  });
-} catch (e: any) {
-  if (e.code === "auth/already-initialized") {
-    auth = getAuth(app);
-  } else {
-    throw e;
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+
+if (hasValidConfig) {
+  try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : (getApps()[0] as FirebaseApp);
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+    });
+  } catch (e: unknown) {
+    const err = e as { code?: string };
+    if (err.code === "auth/already-initialized" && app) {
+      auth = getAuth(app);
+    } else {
+      console.warn("Firebase init failed, auth disabled:", err);
+      auth = null;
+    }
   }
 }
 

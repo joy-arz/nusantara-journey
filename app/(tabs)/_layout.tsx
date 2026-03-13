@@ -1,4 +1,3 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
@@ -121,8 +120,21 @@ function ClassicTabLayout() {
   );
 }
 
+function useLiquidGlassAvailable(): boolean {
+  try {
+    const { isLiquidGlassAvailable } = require("expo-glass-effect");
+    if (typeof isLiquidGlassAvailable === "function") {
+      return isLiquidGlassAvailable();
+    }
+    return !!isLiquidGlassAvailable;
+  } catch {
+    return false;
+  }
+}
+
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
+  const useLiquidGlass = useLiquidGlassAvailable();
+  if (useLiquidGlass) {
     return <NativeTabLayout />;
   }
   return <ClassicTabLayout />;

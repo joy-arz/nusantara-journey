@@ -7,13 +7,14 @@ import { Image } from "expo-image";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
 import { useCart } from "@/context/CartContext";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useGame } from "@/context/GameContext";
+import { FALLBACK_PRODUCTS } from "@/constants/fallback-products";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
@@ -144,7 +145,9 @@ export default function MarketplaceScreen() {
     queryKey: ["/api/products"],
   });
 
-  const filteredProducts = products.filter(p => {
+  const productsToShow = isError ? FALLBACK_PRODUCTS : products;
+
+  const filteredProducts = productsToShow.filter(p => {
     const matchesCategory = activeCategory === "all" || p.category === activeCategory;
     const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.origin.toLowerCase().includes(search.toLowerCase());
@@ -229,13 +232,11 @@ export default function MarketplaceScreen() {
         visible={showCart}
         onRequestClose={() => setShowCart(false)}
       >
-        <Pressable 
-          style={styles.modalBackdrop} 
-          onPress={() => setShowCart(false)}
-        >
-          <View style={styles.modalBackdrop} />
-        </Pressable>
-        <View style={styles.cartSheet}>
+        <View style={StyleSheet.absoluteFill}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowCart(false)}>
+            <View style={styles.modalBackdrop} />
+          </Pressable>
+          <Pressable style={styles.cartSheet} onPress={() => {}}>
           <View style={styles.cartSheetHeader}>
             <Text style={styles.cartSheetTitle}>Cart ({totalItems})</Text>
             <Pressable onPress={() => setShowCart(false)}>
@@ -283,24 +284,23 @@ export default function MarketplaceScreen() {
               </Pressable>
             </ScrollView>
           )}
+          </Pressable>
         </View>
       </Modal>
 
-      {/* Products Grid */}
-      {isError ? (
-        <View style={styles.empty}>
-          <Ionicons name="cloud-offline" size={40} color={Colors.textMuted} />
-          <Text style={styles.loadingText}>Could not load products. Check your connection.</Text>
-          <Pressable
-            style={({ pressed }) => [styles.catChip, styles.catChipActive, { marginTop: 12, opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => refetch()}
-            accessibilityLabel="Retry loading products"
-            accessibilityRole="button"
-          >
-            <Text style={styles.catChipTextActive}>Retry</Text>
+      {/* Offline banner when using fallback products */}
+      {isError && (
+        <View style={styles.offlineBanner}>
+          <Ionicons name="cloud-offline-outline" size={16} color={Colors.accent} />
+          <Text style={styles.offlineBannerText}>Showing sample products. Start the server to load from database.</Text>
+          <Pressable style={styles.offlineRetryBtn} onPress={() => refetch()}>
+            <Text style={styles.offlineRetryText}>Retry</Text>
           </Pressable>
         </View>
-      ) : isLoading ? (
+      )}
+
+      {/* Products Grid */}
+      {isLoading && !isError ? (
         <View style={styles.loading}>
           <Text style={styles.loadingText}>Loading artisan products...</Text>
         </View>
@@ -363,6 +363,33 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   catChipText: { fontSize: 12, color: Colors.textMuted, fontFamily: "Inter_500Medium" },
   catChipTextActive: { color: Colors.text },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: Colors.accent + "18",
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontFamily: "Inter_500Medium",
+  },
+  offlineRetryBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.primary,
+  },
+  offlineRetryText: {
+    fontSize: 12,
+    color: Colors.text,
+    fontFamily: "Inter_600SemiBold",
+  },
   grid: { padding: 16 },
   row: { gap: 12, marginBottom: 12 },
   card: {

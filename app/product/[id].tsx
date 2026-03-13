@@ -13,6 +13,7 @@ import { useCart } from "@/context/CartContext";
 import * as Haptics from "expo-haptics";
 
 import { TAB_BAR_HEIGHT, WEB_TOP_INSET, WEB_BOTTOM_INSET } from "@/constants/layout";
+import { FALLBACK_PRODUCTS } from "@/constants/fallback-products";
 
 interface Product {
   id: number;
@@ -35,6 +36,10 @@ export default function ProductDetailScreen() {
   const { data: product, isLoading, isError } = useQuery<Product>({
     queryKey: [`/api/products/${id}`],
   });
+
+  const productId = id ? parseInt(id, 10) : NaN;
+  const fallbackProduct = !isNaN(productId) ? FALLBACK_PRODUCTS.find((p) => p.id === productId) : null;
+  const displayProduct = product ?? (isError && fallbackProduct ? fallbackProduct : null);
 
   const topPadding = Platform.OS === "web" ? WEB_TOP_INSET : insets.top;
   const bottomPadding = Platform.OS === "web" ? WEB_BOTTOM_INSET + 16 : insets.bottom + 16;

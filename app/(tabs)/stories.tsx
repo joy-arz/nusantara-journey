@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Dimensions, Platform, Modal, FlatList
+  Dimensions, Platform, Modal, FlatList, StatusBar
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -99,11 +99,15 @@ function StoryDetailModal({ story, onClose }: { story: FolkloreStory; onClose: (
 
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 20 }]}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalSheet, { paddingBottom: insets.bottom + 20 }]} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalHandle} />
 
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalScrollContent}
+          >
             {/* Header illustration */}
             <View style={styles.modalIllustration}>
               <View style={[StyleSheet.absoluteFill, { backgroundColor: catColor + "20", alignItems: "center", justifyContent: "center" }]}>
@@ -182,11 +186,11 @@ function StoryDetailModal({ story, onClose }: { story: FolkloreStory; onClose: (
             </View>
           </ScrollView>
 
-          <Pressable style={styles.closeBtn} onPress={onClose}>
+          <Pressable style={[styles.closeBtn, { top: 14 + insets.top }]} onPress={onClose}>
             <Ionicons name="close" size={22} color={Colors.text} />
           </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -216,8 +220,9 @@ export default function StoriesScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       {/* Header */}
-      <View style={[styles.header, { paddingTop: topPadding + 12 }]}>
+      <View style={[styles.header, { paddingTop: topPadding + 16 }]}>
         <Text style={styles.headerTitle}>Cerita Rakyat</Text>
         <Text style={styles.headerSubtitle}>Indonesian Folklore — {FOLKLORE_STORIES.length} Stories</Text>
       </View>
@@ -390,13 +395,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundSecondary,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     maxHeight: '93%',
+    minHeight: 400,
     overflow: 'hidden',
+    flex: 0,
   },
   modalHandle: {
     width: 40, height: 4, backgroundColor: Colors.border,
     borderRadius: 2, alignSelf: 'center', marginTop: 14, marginBottom: 0,
   },
   modalScroll: { flex: 1 },
+  modalScrollContent: { paddingBottom: 40 },
   modalIllustration: {
     height: 140, alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',

@@ -78,6 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleFirebaseSignIn = async (googleIdToken: string) => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
       const credential = GoogleAuthProvider.credential(googleIdToken);
@@ -119,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      await auth.signOut();
+      if (auth) await auth.signOut();
       await apiRequest("POST", "/api/auth/logout");
     } catch {
       // Best-effort logout
