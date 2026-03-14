@@ -1,0 +1,14 @@
+# Render Blueprint - Nusantara Journey Backend
+# https://docs.render.com/blueprint-spec
+services:
+  - type: web
+    runtime: node
+    name: nusantara-journey-api
+
+    buildCommand: npm install && npm run server:build
+    startCommand: npm run server:prod
+
+    # Render assigns PORT automatically - server uses process.env.PORT
+    # Add env vars in Render Dashboard: Environment tab
+    # Required: DATABASE_URL, OPENAI_API_KEY, SESSION_SECRET
+    # Optional: OPENAI_BASE_URL, EXPO_PUBLIC_DOMAIN, ALLOWED_ORIGINS
