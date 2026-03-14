@@ -15,6 +15,7 @@ const SessionStore = MemoryStore(session);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  ...(process.env.OPENAI_BASE_URL && { baseURL: process.env.OPENAI_BASE_URL }),
 });
 
 const NUSANTARA_SYSTEM_PROMPT = `You are Arjuna, an expert AI guide for Indonesian cultural heritage, history, and tourism. You have deep knowledge of:
