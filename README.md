@@ -134,6 +134,3 @@ npm test
 npm run test:api
 ```
 
-## License
-
-This project is licensed under the MIT License.
