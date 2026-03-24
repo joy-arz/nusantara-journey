@@ -25,6 +25,20 @@ Nusantara Journey addresses these by integrating GPS discovery, AI-guided herita
 - **Interactive Map** — Explore the territories of ancient kingdoms and find modern points of interest.
 - **Gamified Experience** — Earn XP, complete quests, and track your cultural journey through a profile dashboard.
 
+## Screenshots
+
+<div align="center">
+  <img src="assets/screenshots/WhatsApp-Image-2026-03-24-at-20.50.00.jpeg" alt="Discover Screen" width="180" />
+  <img src="assets/screenshots/WhatsApp-Image-2026-03-24-at-20.50.01.jpeg" alt="Map Screen" width="180" />
+</div>
+<div align="center">
+  <img src="assets/screenshots/WhatsApp-Image-2026-03-24-at-20.50.02.jpeg" alt="Stories Screen" width="180" />
+  <img src="assets/screenshots/WhatsApp-Image-2026-03-24-at-20.50.02-(1).jpeg" alt="Marketplace Screen" width="180" />
+</div>
+<div align="center">
+  <img src="assets/screenshots/WhatsApp-Image-2026-03-24-at-20.50.02-(2).jpeg" alt="Product Detail Screen" width="180" />
+</div>
+
 ## Tech Stack
 
 | Layer | Technology |
